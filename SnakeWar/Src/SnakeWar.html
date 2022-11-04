@@ -1,0 +1,307 @@
+<html>
+    <head>
+        <style>
+            body{
+                overflow: hidden;
+            }
+            img {
+                max-width: 100%;
+            }
+        </style>
+        <script>
+            var score = 0;
+            //for direction-- up == 0, right == 1, down == 2, left == 3, up == 4
+            function sendResult(){
+                var comment = document.getElementById("comment").value;
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        alert(comment + ", your result sent succesfully");
+                        window.location.reload(false); 
+                    }
+                };
+                xmlhttp.open("GET","Snake_assets/saveResultsSnake.php?q=" + comment + "&r=" + score , true);
+                xmlhttp.send();
+		    }
+            function showScores() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("highscores").innerHTML = this.responseText;
+                    }
+                };
+                xmlhttp.open("GET","Snake_assets/getResultsSnake.php",true);
+                xmlhttp.send();
+		    }
+            var speed = 1000;
+            var direction = 1;
+            var prevdirection;
+            var lose = 0;
+            var spawnRat = 0;
+            var getBigger = 0;
+            var loadref;
+            var arrayOfScreen = new Array(10);
+            var arraySnake = new Array(); //at 0 head, at end tail
+            var rat = [1,1]; 
+            function start(){
+                loadref = window.setInterval(load, speed);
+                showScores();
+                var loadingArray  = 0;
+                var division = document.getElementById("screen");
+                var i = 100;
+                var j = 1;
+                while( j <= i){
+                    division.innerHTML += "<img src = blank.jpg id ='" + j + "' width = '9%' height = '9%'> ";
+                    j++;      
+                }
+                //initializing stuff
+                for (var i = 0; i < arrayOfScreen.length; i++) { 
+                    arrayOfScreen[i] = []; 
+                } 
+                var h = 1;
+                for (var i = 0; i < 10; i++) { 
+                    for (var j = 0; j < 10; j++) { 
+                        arrayOfScreen[i][j] = h;
+                        h++;
+                    } 
+                }
+                arraySnake.push([3,3,1]); //head x,y, and direction facing  //for direction-- up == 0, right == 1, down == 2, left == 3
+                arraySnake.push([2,3,1]); //tail x,y, and direction facing  //for direction-- up == 0, right == 1, down == 2, left == 3
+                prevdirection = arraySnake[0][2];
+                //alert(arrayOfScreen[0][9]);
+            }
+            function load(){
+                //load rat in a location where snake is not present
+                if(spawnRat){
+                    var ratnotok = 0;
+                    score++;
+                    var scoreDisplay = document.getElementById("score");
+                    scoreDisplay.innerHTML = "<h1> Score: " + score + "</h1>";
+                    while(1){
+                        rat[0] = Math.floor( 0 + Math.random() * 10);
+                        rat[1] = Math.floor( 0 + Math.random() * 10);
+                        for(var i = 0; i < arraySnake.length; i++){
+                            if((arraySnake[i][0] == rat[0]) && (arraySnake[i][1] == rat[1])){
+                                ratnotok = 1;
+                            }
+                        }
+                        if(!ratnotok)
+                            break;
+                        ratnotok = 0;
+                    }
+                    spawnRat = 0;
+                    window.clearInterval(loadref);
+                    if(speed > 300)
+                        speed = speed - 100;
+                    loadref = window.setInterval(load,speed);
+                }
+                if(!lose){
+                    //erase tail
+                    var lastTailx;
+                    var lastTaily;
+                    lastTailx = arraySnake[arraySnake.length - 1][0];
+                    lastTaily = arraySnake[arraySnake.length - 1][1];
+                    var test = document.getElementById(arrayOfScreen[arraySnake[arraySnake.length - 1][1]][arraySnake[arraySnake.length - 1][0]]);
+                    test.setAttribute("src","blank.jpg");
+                    for(var i = 1; i < arraySnake.length; i++){
+                            arraySnake[arraySnake.length - i][0] = arraySnake[arraySnake.length - (i + 1)][0];
+                            arraySnake[arraySnake.length - i][1] = arraySnake[arraySnake.length - (i + 1)][1];
+                            arraySnake[arraySnake.length - i][2] = arraySnake[arraySnake.length - (i + 1)][2];
+                    }
+                    //change in x
+                    if(direction == 1){
+                        arraySnake[0][0] = arraySnake[0][0] + 1;
+                        arraySnake[0][2] = 1;
+                    }
+                    if(direction == 3){
+                        arraySnake[0][0] = arraySnake[0][0] - 1;
+                        arraySnake[0][2] = 3;
+                    }
+                    //change in y
+                    if(direction == 2){
+                        arraySnake[0][1] = arraySnake[0][1] + 1;
+                        arraySnake[0][2] = 2;
+                    }
+                    if(direction == 0){
+                        arraySnake[0][1] = arraySnake[0][1] - 1;
+                        arraySnake[0][2] = 0;
+                    }
+                    //check if collision occurs or rat eaten
+                    for(var i = 1; i < arraySnake.length; i++){
+                        if((rat[0] == arraySnake[0][0]) && (rat[1] == arraySnake[0][1])){
+                            getBigger = 1;
+                        }
+                        if((arraySnake[i][0] == arraySnake[0][0]) && (arraySnake[i][1] == arraySnake[0][1])){
+                            lose = 1;
+                        }
+                    }
+                    if((arraySnake[0][0] > 9) || (arraySnake[0][1] > 9) || (arraySnake[0][1] < 0) || (arraySnake[0][0] < 0))
+                        lose = 1;
+                    if(lose){
+                        alert("game over");
+                    }
+                        
+                    if(getBigger){
+                        arraySnake.push([lastTailx,lastTaily]);
+                        getBigger = 0;
+                        spawnRat = 1;
+                    }
+                    //display rat
+                    test = document.getElementById(arrayOfScreen[rat[1]][rat[0]]);
+                    test.setAttribute("src","Snake_assets/rat.jpg");
+                    //display snake
+                    for(var i = 0; i < arraySnake.length; i++){
+                        test = document.getElementById(arrayOfScreen[arraySnake[i][1]][arraySnake[i][0]]);
+                        if(i == 0){//head
+                            if(arraySnake[0][2] == 0)
+                                test.setAttribute("src","Snake_assets/snakehead_up.jpg");
+                            if(arraySnake[0][2] == 1)
+                                test.setAttribute("src","Snake_assets/snakehead_right.jpg");
+                            if(arraySnake[0][2] == 2)
+                                test.setAttribute("src","Snake_assets/snakehead_down.jpg");
+                            if(arraySnake[0][2] == 3)
+                                test.setAttribute("src","Snake_assets/snakehead_left.jpg");
+                        }
+                        else if(i == (arraySnake.length - 1)){//tail
+                            if(arraySnake[i][2] == 0)
+                                test.setAttribute("src","Snake_assets/snaketail_up.jpg");
+                            if(arraySnake[i][2] == 1)
+                                test.setAttribute("src","Snake_assets/snaketail_right.jpg");
+                            if(arraySnake[i][2] == 2)
+                                test.setAttribute("src","Snake_assets/snaketail_down.jpg");
+                            if(arraySnake[i][2] == 3)
+                                test.setAttribute("src","Snake_assets/snaketail_left.jpg");
+                        }
+                        else{//others
+                            if(prevdirection == arraySnake[i][2]){
+                                if(arraySnake[i][2] == 0 || arraySnake[i][2] == 2 )
+                                    test.setAttribute("src","Snake_assets/snake_joinupdown.jpg");
+                                if(arraySnake[i][2] == 1 || arraySnake[i][2] == 3)
+                                    test.setAttribute("src","Snake_assets/snake_joinleftright.jpg");
+                            }
+                            else{
+                                if(prevdirection == 0){
+                                    if(arraySnake[i][2] == 1)
+                                        test.setAttribute("src","Snake_assets/snake_joinleftup.jpg");
+                                    if(arraySnake[i][2] == 3)
+                                        test.setAttribute("src","Snake_assets/snake_joinupright.jpg");
+                                }
+                                if(prevdirection == 1){
+                                    if(arraySnake[i][2] == 0)
+                                        test.setAttribute("src","Snake_assets/snake_joinrightdown.jpg");
+                                    if(arraySnake[i][2] == 2)
+                                        test.setAttribute("src","Snake_assets/snake_joinupright.jpg");
+                                }
+                                if(prevdirection == 2){
+                                    if(arraySnake[i][2] == 1)
+                                        test.setAttribute("src","Snake_assets/snake_joindownleft.jpg");
+                                    if(arraySnake[i][2] == 3)
+                                        test.setAttribute("src","Snake_assets/snake_joinrightdown.jpg");
+                                }
+                                if(prevdirection == 3){
+                                    if(arraySnake[i][2] == 0)
+                                        test.setAttribute("src","Snake_assets/snake_joindownleft.jpg");
+                                    if(arraySnake[i][2] == 2)
+                                        test.setAttribute("src","Snake_assets/snake_joinleftup.jpg");
+                                }
+                            }
+                        }
+                        prevdirection = arraySnake[i][2];
+                    }
+                }
+                else{
+                    window.clearInterval(loadref);
+                    var scoreDisplay = document.getElementById("score");
+                    scoreDisplay.innerHTML = "<h1>Your score is :" + score + "</h1>";
+                    if(score > 0){
+                        scoreDisplay.innerHTML += "Enter you name: <input type = 'text' id = 'comment'  placeholder = 'Name' style='width: 300px; height: 50px;'> ";
+                        scoreDisplay.innerHTML += "<input type = 'submit' onclick = 'sendResult()'>";
+                    }
+                    else{
+                        scoreDisplay.innerHTML += "<h1>Try again</h1>";
+                    }
+                    
+                    //
+                }
+            }
+            window.addEventListener("load",start,false);  
+            document.addEventListener('keydown', function(event) {
+                if(event.keyCode == 37) {
+                    if((direction == 0) || (direction == 2))
+                        direction = 3;
+                }
+                else if(event.keyCode == 39) {
+                    if((direction == 0) || (direction == 2))
+                        direction = 1;
+                }
+                else if(event.keyCode == 38) {
+                    if((direction == 3) || (direction == 1))
+                        direction = 0;
+                }
+                else if(event.keyCode == 40) {
+                    if((direction == 3) || (direction == 1))
+                        direction = 2;
+                }
+            });
+            //direction facing  //for direction-- up == 0, right == 1, down == 2, left == 3
+        </script>
+    </head>
+    <body>
+        
+        <div id = "screen" style = "width: 600px; height: 600px;">
+        </div>
+        <div id = "controls" style = "width: 50%; height :30%">
+                <table align = "left" table border = "1" style = "background-color: white; ">
+                    <tbody>
+                        <tr>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="direction = 3;">
+                            </th>
+                            <th rowspan = "1" colspan = "3">
+                                <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="direction = 0;">
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="direction = 1;"> 
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <div id = "score"><h1>Score: 0</h1></div>
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <div id = "highscores"><h1>HighScores</h1></div>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th rowspan = "1" colspan = "3">
+                                <img src = snakearrow_down.png width = "250px" height = "125px" onclick ="direction = 2;">
+                            </th>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+        </div>
+        <div id = "assets">
+            <img src = Snake_assets/snakehead_left.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snakehead_right.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snakehead_up.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snakehead_down.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snaketail_down.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snaketail_left.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snaketail_up.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snaketail_right.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snake_joinleftright.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snake_joindownleft.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snake_joinrightdown.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snake_joinupdown.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snake_joinupright.jpg width = "20px" height = "20px">
+            <img src = Snake_assets/snake_joinleftup.jpg width = "20px" height = "20px">
+        </div>
+    </body>
+</html>

@@ -1,0 +1,348 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=1575, user-scalable=no" />
+        <style>
+            body{
+                overflow: hidden;
+            }
+        </style>
+        <script>
+            var keys = {
+                left: false,
+                right: false
+            };
+            var processRef;
+            var gameCanvas;
+            var gameContext;
+            var numOfBlocks = 25; //should be multiple of 5
+            var blockLocationX = new Array(numOfBlocks);
+            var blockLocationY = new Array(numOfBlocks);
+            var blockHeight = 0;
+            var blockWidth = 0;
+            var screenHeight = 800;
+            var screenWidth = 600;
+            var blockColors = ['grey', 'red', 'yellow','skyblue', 'purple', 'orange', 'green'];
+            var player;
+            var left;
+            var right;
+            var pressed = 0
+            
+            function start(){
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                        player.moving = 1;
+                        player.movingleft = 1;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+                        player.movingright = 1;
+                        player.moving = 1;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                        player.moving = 0;
+                        player.movingleft = 0;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                        player.moving = 0;
+                        this.movingright = 0;
+                    }
+                });
+                canvasInit();
+                player = new Player(screenWidth / 2 - 100);
+                ball = new Ball(screenWidth / 2, screenHeight / 2 + 100);
+                processRef = window.setInterval(process, 20);
+            }
+            function canvasInit(){
+                //initialize the canvas
+                gameCanvas = document.getElementById("gameScreen");
+                gameContext = gameCanvas.getContext("2d");
+                //fill with blocks, 5 blocks should be spread out on the top half screen
+                //calculate block height and width
+                var tophalf = screenHeight / 2;
+                var numberOfRows = numOfBlocks / 5;
+                var numberOfColoumns = 5;
+                blockHeight = tophalf / numberOfRows;
+                blockWidth = screenWidth / numberOfColoumns;
+                // fill the blocks on screen
+                var count = 0
+                for(var i = 0; i < numberOfRows; i++){
+                    for(var j = 0; j < numberOfColoumns; j++){
+                        //calculate the position of the current block
+                        blockLocationX[count] = j * blockWidth;
+                        blockLocationY[count] = i * blockHeight;
+                        //select random color
+                        gameContext.fillStyle = blockColors[Math.floor(0 + Math.random() * 7)];
+                        gameContext.fillRect(blockLocationX[count], blockLocationY[count], blockWidth, blockHeight);
+                        count++;
+                    }
+                }
+            }
+            //touch input
+            function leftf(){
+                left = 1;
+                pressed = 20;
+            }
+            function rightf(){
+                right = 1;
+                pressed = 20;
+            }
+            function process(){
+                player.draw();
+                ball.move();
+                ball.draw();
+                //keyboard input process
+                if(player.movingleft && player.moving){
+                    player.moveLeft(6);
+                }
+                else if(player.movingright && player.moving){
+                    player.moveRight(6);
+                }
+                //touch input process
+                if(pressed > 0){
+                    pressed--;
+                    if(left)
+                        player.moveLeft(6);
+                    else if(right)
+                        player.moveRight(6);
+                }
+                if(pressed == 1){
+                    left = 0;
+                    right = 0;
+                    pressed = 0;
+                }
+                //win condition
+                if(numOfBlocks == 0){
+                    alert('you win!');
+                    clearInterval(processRef);
+                }
+            }
+            class Ball{
+                constructor(x, y){
+                    this.prevLocationX = x;
+                    this.prevLocationY = y;
+                    this.locationX = x;
+                    this.locationY = y;
+                    this.size = 10;
+                    this.color = 'black';
+                    this.angle = 0;
+                    this.moveRadius = 10;
+                    this.collisionRadius = 10;
+                    this.loseheight = 30;
+                }
+                move(){
+                    //save the prev data
+                    this.prevLocationX = this.locationX;
+                    this.prevLocationY = this.locationY;
+                    //check collision and change angle
+                    this.resetAngle();
+                    this.checkCollision();
+                    this.resetAngle();
+                    //calculate how much to move
+                    this.moveY = this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    this.moveX = this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    //update location
+                    this.locationX += this.moveX;
+                    this.locationY -= this.moveY;
+                }
+                resetAngle(){
+                    if(this.angle >= 360){
+                        this.angle -= 360;
+                    }
+                    if(this.angle < 0){
+                        this.angle += 360;
+                    }
+                    this.angle = Math.round(this.angle / 10) * 10;
+                    //change the angle a bit if it is 90
+                    if(this.angle == 90 || this.angle == 180){
+                        this.angle += (-10 + Math.random() * 20);
+                    }
+                }
+                checkCollision(){
+                    var collision = 0;
+                    var vertical = 0;
+                    var horizontal = 0;
+                    //calculate how much to move
+                    var tempLocationX = this.locationX + this.collisionRadius * Math.cos(Math.PI * this.angle / 180);
+                    var tempLocationY = this.locationY - this.collisionRadius * Math.sin(Math.PI * this.angle / 180);
+                    //check wall collision
+                    if(tempLocationX <= 0 || tempLocationX >= screenWidth){
+                        collision = 1;
+                        vertical = 1;
+                    }
+                    else if(tempLocationY <= 0  || tempLocationY >= screenHeight){
+                        collision = 1;
+                        horizontal = 1;
+                    }
+                    //check block collision
+                    for(var i = 0; i < numOfBlocks; i++){
+                        if((blockLocationX[i] <= tempLocationX) && (blockLocationX[i] + blockWidth >= tempLocationX) && (blockLocationY[i] <= tempLocationY) && (blockLocationY[i] + blockHeight >= tempLocationY)){
+                            collision = 1;
+                            //determine which side the ball is closest to
+                            var leftDist = Math.abs(tempLocationX - blockLocationX[i]);
+                            var rightDist = Math.abs(tempLocationX - blockLocationX[i] + blockWidth);
+                            var upDist = Math.abs(tempLocationY - blockLocationY[i]);
+                            var downDist = Math.abs(tempLocationY - (blockLocationY[i] + blockHeight));
+                            if(leftDist < upDist && leftDist < downDist){
+                                vertical = 1;
+                            }
+                            else if(rightDist < upDist && rightDist < downDist){
+                                vertical = 1;
+                            }
+                            else 
+                                horizontal = 1;
+                            //clear the block on canvas
+                            gameContext.fillStyle = 'white';
+                            gameContext.fillRect(blockLocationX[i], blockLocationY[i], blockWidth, blockHeight);
+                            //delete block on collsion
+                            blockLocationX.splice(i, 1);
+                            blockLocationY.splice(i, 1);
+                            //reduce number of blocks
+                            numOfBlocks -= 1;
+                        }
+                    }
+                    //check if touch the ground
+                    if(tempLocationY >= (screenHeight - player.offset + this.loseheight)){
+                        clearInterval(processRef);
+                        alert('You Lose!');
+                    }
+                    //check player collision
+                    if((player.location <= tempLocationX) && (player.location + player.size >= tempLocationX) && (screenHeight - player.offset <= tempLocationY) && (screenHeight >= tempLocationY)){
+                        collision = 1;
+                        horizontal = 1;
+                        this.angle += (-10 + Math.random() * 20);
+                    }
+                    //if collision check which type
+                    if(collision == 1){
+                        if(horizontal){
+                            console.log('horizontal');
+                            //closer to 90
+                            if(this.angle - 90 <= this.angle - 270){
+                                //angle is higher than 90 this shit is going down, turn anti clock wise
+                                if(this.angle - 90 >= 0){
+                                    this.angle += (this.angle - 90) * 2;
+                                }
+                                //angle is lower than 90 this shit is going up, turn clock wise
+                                else{
+                                    this.angle -= (90 - this.angle) * 2;
+                                }
+                            }
+                            else{
+                                //angle is higher than 270 this shit is going up, turn anti clock wise
+                                if(this.angle - 270 >= 0){
+                                    this.angle += (270 - this.angle) * 2;
+                                }
+                                //angle is lower than 270 this shit is going up, turn clock wise
+                                else{
+                                    this.angle -= (this.angle - 270) * 2;
+                                }
+                            }
+                        }
+                        if(vertical){
+                            console.log('vertical');
+                            //closer to 0
+                            if(this.angle - 0 <= this.angle - 180){
+                                console.log('1');
+                                //angle is higher than 0 this shit is going right, turn anti clock wise
+                                if(this.angle - 0 >= 0){
+                                    this.angle -= (this.angle) * 2;
+                                }
+                                //angle is lower than 0 this shit is going left, turn clock wise
+                                else{
+                                    this.angle += (Math.abs(this.angle)) * 2;
+                                }
+                            }
+                            if(360 - this.angle  <= this.angle - 180){
+                                console.log('2');
+                                //angle is higher than 0 this shit is going right, turn anti clock wise
+                                if(this.angle - 360 >= 0){
+                                    this.angle -= (this.angle - 360) * 2;
+                                }
+                                //angle is lower than 0 this shit is going left, turn clock wise
+                                else{
+                                    this.angle += (360 - this.angle) * 2;
+                                }
+                            }
+                            else{
+                                console.log('3');
+                                //angle is higher than 180 this shit is going left, turn clock wise
+                                if(this.angle - 180 > 0){
+                                    this.angle -= (this.angle - 180) * 2;
+                                }
+                                //angle is lower than 180 this shit is going right, turn anti clock wise
+                                else{
+                                    this.angle += (180 - this.angle) * 2;
+                                }
+                            }
+                        }
+                    }
+                }
+                draw(){
+                    //clear the previous ball location
+                    gameContext.fillStyle = 'white';
+                    gameContext.fillRect(this.prevLocationX, this.prevLocationY, this.size, this.size);
+                    //draw the new location
+                    gameContext.fillStyle = this.color;
+                    gameContext.fillRect(this.locationX, this.locationY, this.size, this.size);
+                }
+            }
+            class Player{
+                constructor(x){
+                    this.location = x;
+                    this.size = 200;
+                    this.color = 'blue';
+                    this.offset = 50;
+                    this.moving = 0;
+                    this.movingleft = 0;
+                    this.movingright = 0;
+                }
+                draw(){
+                    //clear the line
+                    gameContext.fillStyle = 'white';
+                    gameContext.fillRect(0, screenHeight - this.offset, screenWidth, this.offset);
+                    //draw the player
+                    gameContext.fillStyle = this.color;
+                    gameContext.fillRect(this.location, screenHeight - this.offset, this.size, this.offset);
+                }
+                moveLeft(value){
+                    this.location -= value;
+                    if(this.location < 0)
+                        this.location = 0;
+                }
+                moveRight(value){
+                    this.location += value;
+                    if(this.location > screenWidth - this.size)
+                        this.location = screenWidth - this.size;
+                }
+            }
+            window.addEventListener("load", start, false);   
+        </script>
+    </head>
+    <body>
+        <canvas id = "gameScreen" width = "600" height = "800" style = "border:1px solid #000000;"></canvas>
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="leftf();">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="rightf();"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>HighScores</h1></div>
+                        </th>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>

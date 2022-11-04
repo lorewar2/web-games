@@ -1,0 +1,562 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=1080px, user-scalable=no" />
+        <style>
+            body{
+                overflow: hidden;
+            }
+        </style>
+        <script>
+            //screen restrictions
+            var lowerLimitX = 20;
+            var upperLimitX = 1000;
+            var lowerLimitY = 0;
+            var upperLimitY = 900;
+            var upperLimitYalien = 400;
+
+            var background = new Array(6);
+            var score = 0;
+            var player;
+            var alien;
+            var animationRef;
+            var processRef;
+            var pressed = 0;
+
+            var touchleft = 0;
+            var touchright = 0;
+            var touchup = 0;
+            var touchdown = 0;
+            var touchshoot = 0;
+
+            function start(){
+                player = new Plane(1);
+                alien = new Alien(2);
+                keyboardStuff();
+                player.player = 1;
+                player.Xposition = 400;
+                player.Yposition = 800;
+                player.updatePosition();
+                alien.Xposition = 200;
+                alien.updatePosition();
+                for(var i = 1; i < 7; i++)
+                    background[i] = new Background(i);
+                animationRef = window.setInterval(animation, 10);
+                processRef = window.setInterval(process, 5);
+            }
+
+            //background stuff + test stuff
+            function animation(){
+                score++;
+                for(var i = 1; i < 7; i++)
+                    background[i].updatePosition();
+                if((score > 1450) && (background[1].backgroundNumber < 3)){ //2650 good
+                    for(var i = 1; i < 7; i++){
+                        background[i].backgroundNumber++;
+                        if((background[i].backgroundNumber % 2 == 0) && (background[i].changed == 0)){
+                            background[i].transition = 2;
+                            background[i].changed = 1;
+                        }
+                        else{
+                            background[i].changed = 0;
+                        }
+                        background[i].updatebackground = 1;
+                    }
+                    score = 0;
+                }
+                alien.shoot = 1;
+                console.log(background[1].backgroundNumber);
+            }
+
+            //processing everything except background
+            function process(){
+                if(keys.space){
+                    player.shoot = 1;
+                }
+                else{
+                    player.shoot = 0;
+                }
+                if(keys.left)
+                    player.moveLeft();
+                else if(keys.right)
+                    player.moveRight();
+                if(keys.up)
+                    player.moveUp();
+                else if(keys.down)
+                    player.moveDown();
+                touch();
+                player.shootFunc();
+                player.bulletProc();
+                alien.shootFunc();
+                alien.bulletProc();
+                hitDetection();
+                ai();
+            }
+            function ai(){
+                if(alien.aiTimer > 0){
+                    if(alien.choice == 0){
+                    }
+                    else if(alien.choice == 1){
+                        alien.moveLeft();
+                    }
+                    else if(alien.choice == 2){
+                        alien.moveRight();
+                    }
+                    else if(alien.choice == 3){
+                        alien.moveUp();
+                    }
+                    else if(alien.choice == 4){
+                        alien.moveDown();
+                    }
+                    alien.aiTimer--;
+                }
+                else{
+                    alien.aiTimer = 50;
+                    alien.choice = Math.floor( 0 + Math.random() * 10);
+                }
+            }
+            function hitDetection(){
+                //alien detect
+                for(var i = 0; i < 10; i++){
+                    if((alien.hitboxXupper > player.bullets[i].Xposition) && (alien.hitboxXlower < player.bullets[i].Xposition)){
+                        if((alien.hitboxYupper > player.bullets[i].Yposition) && (alien.hitboxYlower < player.bullets[i].Yposition)){
+                            alien.destroyed = 1;
+                        }
+                    }
+                }
+                //plane detect
+                if((player.hitboxXupper > alien.bullet.Xposition) && (player.hitboxXlower < alien.bullet.Xposition)){
+                    if((player.hitboxYupper > alien.bullet.Yposition) && (player.hitboxYlower < alien.bullet.Yposition)){
+                        alert("game over");
+                        clearInterval(animationRef);
+                        clearInterval(processRef);
+                    }
+                }
+            }
+            //touch input
+            function leftf(){
+                pressed = 30;
+                touchleft = 1;
+            }
+            function upf(){
+                pressed = 30;
+                touchup = 1;
+            }
+            function downf(){
+                pressed = 30;
+                touchdown = 1;
+            }
+            function rightf(){
+                pressed = 30;
+                touchright = 1;
+            }
+            function shootf(){
+                pressed = 50;
+                touchshoot = 1;
+            }
+            function touch(){
+                if(pressed > 0){
+                    pressed--;
+                    if(touchleft)
+                        player.moveLeft();
+                    if(touchup)
+                        player.moveUp();
+                    if(touchdown)
+                        player.moveDown();
+                    if(touchright)
+                        player.moveRight();
+                    if(touchshoot){
+                        player.shoot = 1;
+                    }
+                        
+                }
+                else{
+                    touchleft = 0;
+                    touchright = 0;
+                    touchup = 0;
+                    touchdown = 0;
+                    touchshoot = 0;
+                }
+            }
+            
+
+            //keyboard input
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                space: false
+            };
+
+            function keyboardStuff(){
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = true;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = true;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = false;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = false;
+                    }   
+                });
+            }
+
+            //each alien has 1 bullet
+            class Alien{
+                constructor(type){
+                    this.type = type;
+                    this.aiTimer = 50;
+                    this.choice = 0;
+                    this.waitTime = 0;
+                    this.Xposition = 400;
+                    this.Yposition = 0;
+                    this.movingLeft = 0;
+                    this.movingRight = 0;
+                    this.hitboxXupper = 0;
+                    this.hitboxXlower = 0;
+                    this.hitboxYupper = 0;
+                    this.hitboxYlower = 0;
+                    this.shoot = 0;
+                    this.destroyed = 0;
+                    this.destroyedTimer = 500;
+                    this.i = 1;
+                    this.bullet = new Bullet(this.type,this.i,1);
+                }
+                updatePosition(){
+                    if(this.destroyed == 0){
+                        this.hitboxXupper = this.Xposition + 30;
+                        this.hitboxXlower = this.Xposition - 30;
+                        this.hitboxYupper = this.Yposition + 30;
+                        this.hitboxYlower = this.Yposition - 30;
+
+                        document.getElementById("alien" + this.type).style.top = this.Yposition;
+                        document.getElementById("alien" + this.type).style.left = this.Xposition;
+                    }
+                    else if(this.destroyedTimer > 0){
+                        document.getElementById("alien" + this.type).setAttribute("src", "../Assets/player_Dead.png");
+                        this.destroyedTimer--;
+                    }
+                    else{
+                        document.getElementById("alien" + this.type).setAttribute("src", "../Assets/alien1.png");
+                        this.destroyedTimer = 500;
+                        this.destroyed = 0;
+                    }
+                    
+                }
+                bulletProc(){
+                    this.bullet.flying();
+                }
+                shootFunc(){
+                    if(this.destroyed == 0){
+                        if(this.shoot == 1 && this.bullet.finish == 1 && this.waitTime == 0){
+                            this.bullet.Xposition = this.Xposition;
+                            this.bullet.Yposition = this.Yposition;
+                            this.bullet.start = 1;
+                            this.bullet.finish = 0;
+                            this.waitTime = 30;
+                        }
+                        else if(this.waitTime > 0){
+                            this.waitTime--;
+                        }
+                    }
+                }
+                moveRight(){
+                    if(this.destroyed == 0){
+                        if((this.Xposition + 3) < upperLimitX)
+                        this.Xposition += 3;
+                    }
+                    this.updatePosition();
+                }
+                moveLeft(){
+                    if(this.destroyed == 0){
+                        if((this.Xposition - 3) > lowerLimitX)
+                            this.Xposition -= 3;
+                    }
+                    this.updatePosition();
+                }
+                moveUp(){
+                    if(this.destroyed == 0){
+                        if((this.Yposition - 3) > lowerLimitY)
+                            this.Yposition -= 3;
+                    }
+                    this.updatePosition();
+                }
+                moveDown(){
+                    if(this.destroyed == 0){
+                        if((this.Yposition + 3) < upperLimitYalien)
+                            this.Yposition += 3;
+                    }
+                    this.updatePosition();
+                }
+            };
+
+            //each plane has 10 bullets
+            class Plane{
+                constructor(type){
+                    this.type = type;
+                    this.waitTime = 0;
+                    this.player = 0;
+                    this.Xposition = 0;
+                    this.Yposition = 0;
+                    this.movingLeft = 0;
+                    this.movingRight = 0;
+                    this.hitboxXupper = 0;
+                    this.hitboxXlower = 0;
+                    this.hitboxYupper = 0;
+                    this.hitboxYlower = 0;
+                    this.shoot = 0;
+                    this.bullets =  new Array(10);
+                    this.currentBullet = 0;
+                    for(var i = 0; i < 10; i++)
+                        this.bullets[i] = new Bullet(this.type,i,0);
+                }
+                updatePosition(){
+                    this.hitboxXupper = this.Xposition + 40;
+                    this.hitboxXlower = this.Xposition - 40;
+                    this.hitboxYupper = this.Yposition + 30;
+                    this.hitboxYlower = this.Yposition - 30;
+
+                    document.getElementById("plane" + this.type).style.top = this.Yposition;
+                    document.getElementById("plane" + this.type).style.left = this.Xposition;
+                }
+                bulletProc(){
+                    for(var i = 0; i < 10; i++){
+                        this.bullets[i].flying();
+                    }
+                }
+                shootFunc(){
+                    if(this.shoot == 1 && player.player == 1){
+                        document.getElementById("playerfire").setAttribute("src","../Assets/shoot0.png");
+                        document.getElementById("playerfire").style.top = this.Yposition - 100;
+                        document.getElementById("playerfire").style.left = this.Xposition - 60;
+                    }
+                    else if(this.shoot == 0 && player.player == 1){
+                        document.getElementById("playerfire").setAttribute("src","../Assets/nothing.png");
+                    }
+                    if(this.shoot == 1 && this.bullets[this.currentBullet].finish == 1 && this.waitTime == 0){
+                        this.bullets[this.currentBullet].Xposition = this.Xposition;
+                        this.bullets[this.currentBullet].Yposition = this.Yposition - 20;
+                        this.bullets[this.currentBullet].start = 1;
+                        this.bullets[this.currentBullet].finish = 0;
+                        this.currentBullet++;
+                        this.waitTime = 30;
+                        if(this.currentBullet > 9)
+                            this.currentBullet = 0;
+                    }
+                    else if(this.waitTime > 0){
+                        this.waitTime--;
+                    }
+                }
+                moveRight(){
+                    if((this.Xposition + 3) < upperLimitX)
+                        this.Xposition += 3;
+                    this.updatePosition();
+                }
+                moveLeft(){
+                    if((this.Xposition - 3) > lowerLimitX)
+                        this.Xposition -= 3;
+                    this.updatePosition();
+                }
+                moveUp(){
+                    if((this.Yposition - 3) > lowerLimitY)
+                        this.Yposition -= 3;
+                    this.updatePosition();
+                }
+                moveDown(){
+                    if((this.Yposition + 3) < upperLimitY)
+                        this.Yposition += 3;
+                    this.updatePosition();
+                }
+            };
+
+
+            class Bullet{
+                constructor(type,i,alien){
+                    this.type = type;
+                    this.alien = alien;
+                    this.number = i;
+                    this.start = 0;
+                    this.finish = 1;
+                    this.Xposition = -100;
+                    this.Yposition = -100;
+                }
+                updatePosition(){
+                    document.getElementById("bullet" + this.type + this.number).style.top = this.Yposition;
+                    document.getElementById("bullet" + this.type + this.number).style.left = this.Xposition;
+                }
+                flying(){
+                    if(this.Yposition < -50 && this.alien == 0)
+                        this.finish = 1;
+                    else if(this.Yposition > 1000 && this.alien == 1)
+                        this.finish = 1;
+                    if(this.start == 1){
+                        if(this.alien == 1)
+                            document.getElementById("bullet" + this.type + this.number).setAttribute("src","../Assets/plasma.png");
+                        else
+                            document.getElementById("bullet" + this.type + this.number).setAttribute("src","../Assets/bullet.png");
+                        this.start = 0;
+                    }
+                    else if(this.start == 0 && this.finish == 0 && this.alien == 0){
+                        this.Yposition -= 5;
+                    }
+                    else if(this.start == 0 && this.finish == 0 && this.alien == 1){
+                        this.Yposition += 5;
+                    }
+                    else if(this.finish == 1){
+                        document.getElementById("bullet" + this.type + this.number).setAttribute("src","../Assets/nothing.png");
+                    }
+                    this.updatePosition();
+                }
+            };
+
+            class Background{
+                constructor(type){
+                    this.type = type;
+                    this.start = 1;
+                    this.finish = 0;
+                    this.changed = 0;
+                    this.transition = 0;
+                    this.updatebackground = 0;
+                    this.backgroundNumber = 1;
+                    this.Yposition = -199 + ((this.type - 1) * 200);
+                    this.initializeBackground(this.backgroundNumber);
+                }
+
+                initializeBackground(nextImage){
+                    var imageNumber = this.type;
+                    document.getElementById('screen').innerHTML += "<img src = '../Assets/background" + nextImage + "_0" + (imageNumber) + ".png' id = 'background" + (this.type) + "' width = '1080px' height = '200px' style = 'position : absolute; z-index: 1;'>";
+                }
+
+                updateBackground(nextImage){
+                    var imageNumber = this.type;
+                    document.getElementById("background" + (this.type)).setAttribute("src","../Assets/background" + nextImage +"_0" + (imageNumber) + ".png");
+                }
+
+                updatePosition(){
+                    this.Yposition += 5;
+                    if(this.Yposition > 1000){
+                        this.Yposition = -199;
+                        if(this.transition == 2){
+                            this.transition = 1;
+                        }
+                        else if(this.transition == 1){
+                            this.transition = 0;
+                            this.backgroundNumber++;
+                            this.updateBackground(this.backgroundNumber);
+                        }
+                        if(this.updatebackground == 1){
+                            this.updatebackground = 0;
+                            this.updateBackground(this.backgroundNumber);
+                        }
+                    }
+                    document.getElementById("background" + this.type).style.top = this.Yposition;
+                    document.getElementById("background" + this.type).style.zIndex = "0";
+                }
+            };
+            
+
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+
+        <div id = "screen" style = " width: 1080px; height: 990px; background-color: black;" >
+            <img src = "../Assets/plane.png" id = "plane1" width = "75px" height = "75px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/alien1.png" id = "alien2" width = "75px" height = "75px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "playerfire" width = "200px" height = "200px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet21" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet10" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet11" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet12" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet13" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet14" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet15" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet16" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet17" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet18" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+            <img src = "../Assets/nothing.png" id = "bullet19" width = "70px" height = "70px" style = "position : absolute; z-index: 5; ">
+        </div>
+        <div id = "controls" style = "width: 1080px; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; position : absolute; z-index: 5; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="leftf();">
+                        </th>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="upf();">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="rightf();"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_fire.png width = "250px" height = "200px" onclick ="shootf();"> 
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>HighScores</h1></div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_down.png width = "250px" height = "125px" onclick ="downf();">
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            <img src = "../Assets/player_Dead.png" width = "10px" height = "10px">
+            <img src = "../Assets/plasma.png" width = "10px" height = "10px">
+            <img src = "../Assets/plane.png" width = "10px" height = "10px">
+            <img src = "../Assets/alien1.png" width = "10px" height = "10px">
+            <img src = "../Assets/bullet.png" width = "10px" height = "10px">
+            <img src = "../Assets/shoot0.png" width = "10px" height = "10px">
+            <img src = "../Assets/background1_01.png" width = "10px" height = "10px">
+            <img src = "../Assets/background1_02.png" width = "10px" height = "10px">
+            <img src = "../Assets/background1_03.png" width = "10px" height = "10px">
+            <img src = "../Assets/background1_04.png" width = "10px" height = "10px">
+            <img src = "../Assets/background1_05.png" width = "10px" height = "10px">
+            <img src = "../Assets/background1_06.png" width = "10px" height = "10px">
+            <img src = "../Assets/background2_01.png" width = "10px" height = "10px">
+            <img src = "../Assets/background2_02.png" width = "10px" height = "10px">
+            <img src = "../Assets/background2_03.png" width = "10px" height = "10px">
+            <img src = "../Assets/background2_04.png" width = "10px" height = "10px">
+            <img src = "../Assets/background2_05.png" width = "10px" height = "10px">
+            <img src = "../Assets/background2_06.png" width = "10px" height = "10px">
+            <img src = "../Assets/background3_01.png" width = "10px" height = "10px">
+            <img src = "../Assets/background3_02.png" width = "10px" height = "10px">
+            <img src = "../Assets/background3_03.png" width = "10px" height = "10px">
+            <img src = "../Assets/background3_04.png" width = "10px" height = "10px">
+            <img src = "../Assets/background3_05.png" width = "10px" height = "10px">
+            <img src = "../Assets/background3_06.png" width = "10px" height = "10px">
+        </div>
+    </body>
+</html>

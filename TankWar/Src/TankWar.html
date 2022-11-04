@@ -1,0 +1,1309 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=1575px, user-scalable=no" />
+        <style>
+            body{
+                overflow: hidden;
+            }
+        </style>
+        <script>
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+            var numOfEnemies = 3;
+            var numOfDestroyed = 0;
+            var onLevel = 0;
+            var spawnPoint1x = 10;
+            var spawnPoint1y = 3;
+            var playerSpawnx = 1;
+            var playerSpawny = 11;
+            var occupiedBlock = new Array(1000);
+            var enemy = new Array(10);
+            var enemybullet = new Array(10);
+            var score = 0;
+            var animationRef;
+            var left = 0;
+            var right = 0;
+            var up = 0;
+            var down = 0;
+            var processRef;
+            var pressed = 0;
+            var gameLost = 0;
+            var level = new Array(5);
+            var arrayOfScreen = new Array(14);
+            level[0] = new Array(14);
+            level[1]= new Array(14);
+            level[2] = new Array(14);
+            level[3]= new Array(14);
+            level[4] = new Array(14);
+
+            //levels
+            level[0][0] =  [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[0][1] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[0][2] =  [ 1,  0,  2,  2,  2,  2,  2,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  0,  1];
+            level[0][3] =  [ 1,  0,  2,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  2,  0,  1];
+            level[0][4] =  [ 1,  0,  2,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  2,  0,  1];
+            level[0][5] =  [ 1,  0,  2,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  2,  0,  1];
+            level[0][6] =  [ 1,  0,  2,  2,  2,  2,  2,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  0,  1];
+            level[0][7] =  [ 1,  0,  2,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  2,  0,  0,  0,  2,  0,  1];
+            level[0][8] =  [ 1,  0,  2,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  2,  0,  1];
+            level[0][9] =  [ 1,  0,  2,  0,  0,  0,  2,  2,  2,  2,  2,  2,  2,  2,  2,  0,  0,  0,  2,  0,  1];
+            level[0][10] = [ 1,  0,  2,  2,  2,  2,  2,  0,  0,  5,  5,  5,  0,  0,  2,  2,  2,  2,  2,  0,  1];
+            level[0][11] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  5,  8,  5,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[0][12] = [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[0][13] = [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0];
+
+            level[1][0] =  [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[1][1] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][2] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][3] =  [ 1,  0,  2,  2,  2,  2,  2,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  2,  0,  1];
+            level[1][4] =  [ 1,  0,  2,  5,  2,  5,  2,  0,  0,  0,  0,  0,  0,  0,  2,  5,  2,  5,  2,  0,  1];
+            level[1][5] =  [ 1,  0,  2,  5,  2,  5,  2,  0,  0,  0,  0,  0,  0,  0,  2,  5,  2,  5,  2,  0,  1];
+            level[1][6] =  [ 1,  0,  2,  2,  2,  2,  2, -1, -1, -1, -1, -1, -1, -1,  2,  2,  2,  2,  2,  0,  1];
+            level[1][7] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][8] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][9] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][10] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  2,  1,  2,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][11] = [ 1,  0,  0,  0,  0,  0,  0,  0,  2,  2,  8,  2,  2,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[1][12] = [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[1][13] = [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0];
+
+            level[2][0] =  [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[2][1] =  [ 1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1];
+            level[2][2] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[2][3] =  [ 1,  0,  1,  2,  2,  2,  2,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  1,  0,  1];
+            level[2][4] =  [ 1,  0,  1,  5,  2,  5,  2,  0,  0,  0,  0,  0,  0,  0,  2,  5,  2,  5,  1,  0,  1];
+            level[2][5] =  [ 1,  0,  1,  5,  2,  5,  2,  0,  0,  0,  0,  0,  0,  0,  2,  5,  2,  5,  1,  0,  1];
+            level[2][6] =  [ 1,  0,  1,  2,  2,  2,  2,  0,  0,  0,  0,  0,  0,  0,  2,  2,  2,  2,  1,  0,  1];
+            level[2][7] =  [ 1,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  1];
+            level[2][8] =  [ 1,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  1];
+            level[2][9] =  [ 1, -1,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2, -1,  1];
+            level[2][10] = [ 1, -1,  0,  0,  0,  0,  0,  0,  0,  5,  5,  5,  0,  0,  0,  0,  0,  0,  0, -1,  1];
+            level[2][11] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  5,  8,  5,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[2][12] = [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[2][13] = [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0];
+
+            level[3][0] =  [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[3][1] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[3][2] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[3][3] =  [ 1,  0,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  1];
+            level[3][4] =  [ 1,  0,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  1];
+            level[3][5] =  [ 1,  0,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  1];
+            level[3][6] =  [ 1,  0,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0, -1,  0,  0,  0,  0,  0,  0,  1];
+            level[3][7] =  [ 1,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  1];
+            level[3][8] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[3][9] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[3][10] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  5,  5,  5,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[3][11] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  5,  8,  5,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[3][12] = [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[3][13] = [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0];
+
+            level[4][0] =  [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[4][1] =  [ 1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  1,  1];
+            level[4][2] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[4][3] =  [ 1,  0,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  1];
+            level[4][4] =  [ 1,  0,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  1];
+            level[4][5] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[4][6] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[4][7] =  [ 1,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  1];
+            level[4][8] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[4][9] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[4][10] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0, -1,  1, -1,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[4][11] = [ 1,  0,  0,  0,  0,  0,  0,  0,  0, -1,  8, -1,  0,  0,  0,  0,  0,  0,  0,  1,  1];
+            level[4][12] = [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[4][13] = [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0];
+
+            
+
+            function redraw(){//place real blocks on the map, testing only around the map //place real blocks on the map, testing only around the map 
+            //solid == 1, brick0 == 2, brick1 == 3, brick2 == 4 glass0 == 5, glass1 == 6, grass == 7, statue == 8 
+                
+                for (var i = 0; i < 13; i++) { 
+                    for (var j = 0; j < 21; j++) {
+                        if(arrayOfScreen[i][j] == -1){
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/grass.png");
+                            document.getElementById(i +"y" + j + "x").style.zIndex = "3";
+                        } 
+                        if(arrayOfScreen[i][j] == 0)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/blank.png");
+                        if(arrayOfScreen[i][j] == 1)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/solid.png");
+                        if(arrayOfScreen[i][j] == 2)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/brick0.png");
+                        if(arrayOfScreen[i][j] == 3)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/brick1.png");
+                        if(arrayOfScreen[i][j] == 4)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/brick2.png");
+                        if(arrayOfScreen[i][j] == 5)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/glass1.png");
+                        if(arrayOfScreen[i][j] == 6)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/glass0.png");
+                        if(arrayOfScreen[i][j] == 8)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/statue.png");
+                        if(arrayOfScreen[i][j] == 9)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","TankWar_assets/destroyedstatue.png"); 
+                    } 
+                }
+            }
+            function sendResult(){
+                var comment = document.getElementById("comment").value;
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        alert(comment + ", your result sent succesfully");
+                        window.location.reload(false); 
+                    }
+                };
+                xmlhttp.open("GET","TankWar_assets/saveResultsTank.php?q=" + comment + "&r=" + score , true);
+                xmlhttp.send();
+		    }
+            function showScores() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("highscores").innerHTML = this.responseText;
+                    }
+                };
+                xmlhttp.open("GET","TankWar_assets/getResultsTank.php",true);
+                xmlhttp.send();
+		    }
+            function lose(){
+                alert("Game Over");
+                var scoreDisplay = document.getElementById("score");
+                scoreDisplay.innerHTML = "<h1>Your score is :" + score + "</h1>";
+                if(score > 0){
+                    scoreDisplay.innerHTML += "Enter you name: <input type = 'text' id = 'comment'  placeholder = 'Name' style='width: 300px; height: 50px;'> ";
+                    scoreDisplay.innerHTML += "<input type = 'submit' onclick = 'sendResult()'>";
+                }
+                else{
+                    scoreDisplay.innerHTML += "<h1>Try again</h1>";
+                    scoreDisplay.innerHTML += "<input type = 'submit' value = 'Reload' onclick = 'window.location.reload(false); '>";
+                }
+            }
+            function start(){// 0 up, 1 right, 2 down, 3 left,
+                showScores();
+                for(var i = 0; i < numOfEnemies + 1; i++){
+                    occupiedBlock[i] = new Array(2);
+                    for(var j = 0; j < 2; j++){
+                        occupiedBlock[i][j] = 0;
+                    }
+                }
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 32) {
+                        player.shootStart = 1;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                        player.moving = 1;
+                        player.direction = 3;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+                        player.moving = 1;
+                        player.direction = 1;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                        player.moving = 1;
+                        player.direction = 0;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = true;
+                        player.moving = 1;
+                        player.direction = 2;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                        player.moving = 0;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                        player.moving = 0;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                        player.moving = 0;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = false;
+                        player.moving = 0;
+                    }   
+                });
+                
+
+                document.getElementById("screen").style.backgroundColor = "black";
+                var division = document.getElementById("screen");
+                var i = 160;
+                var j = 1;
+                //place blank blocks on the map
+                for (var i = 0; i < 13; i++) { 
+                    for (var j = 0; j < 21; j++) { 
+                        division.innerHTML += "<img src = TankWar_assets/blank.png id ='" + i +"y" + j + "x" + "' width = '75px'; height = '75px';>";
+                    } 
+                }
+                
+                //place real blocks on the map, testing only around the map //solid == 1, brick0 == 2, brick1 == 3, brick2 == 4 glass0 == 5, glass1 == 6, grass == 7, statue == 8, destroyed statue == 9
+                arrayOfScreen = level[0];
+                redraw();
+                aiRef = window.setInterval(ai, 20);
+                animationRef = window.setInterval(animation, 50);
+                processRef = window.setInterval(process, 10);
+                player = new Player(0);
+                playerbullet = new Bullet(0);
+                for(var i = 0; i < numOfEnemies; i++){
+                    enemy[i] = new Enemy(i + 1);
+                    enemybullet[i] = new Bullet(i + 1);
+                }
+            }
+            function nextLevel(){
+                var oldNum = numOfEnemies;
+                
+                clearInterval(aiRef);
+                clearInterval(animationRef);
+                clearInterval(processRef);
+                
+                alert("level " + (onLevel + 1));
+                score++;
+                onLevel++;
+                numOfEnemies += 3;
+                for(var i = oldNum; i < numOfEnemies; i++){
+                    document.getElementById('screen').innerHTML += "<img src = 'TankWar_assets/nothing.png' id = 'enemy" + (i + 1) + "' width = '70px' height = '70px' style = 'position : absolute; z-index: 0;'>";
+                    document.getElementById('screen').innerHTML += "<img src = 'TankWar_assets/nothing.png' id = 'bullet" + (i + 1) + "' width = '70px' height = '70px' style = 'position : absolute; z-index: 1;'>";
+                }
+                arrayOfScreen = level[onLevel % 5];
+                redraw();
+                for(var i = oldNum; i < numOfEnemies + 1; i++){
+                    occupiedBlock[i] = new Array(2);
+                    for(var j = 0; j < 2; j++){
+                        occupiedBlock[i][j] = 0;
+                    }
+                }
+                for(var i = oldNum; i < numOfEnemies; i++){
+                    enemy[i] = new Enemy(i + 1);
+                    enemybullet[i] = new Bullet(i + 1);
+                }
+                
+                for(var i = 0; i < numOfEnemies; i++){
+                    enemy[i].positionBlockX = spawnPoint1x;
+                    enemy[i].positionBlockY = spawnPoint1y;
+                    enemy[i].destroyed = 0;
+                    enemy[i].scoreplus = 0;
+                    enemy[i].destroyTimer = 100;
+                    enemy[i].updatePosition();
+                }
+                player.positionBlockX = playerSpawnx;
+                player.positionBlockY = playerSpawny;
+                player.updatePosition();
+                aiRef = window.setInterval(ai, 20);
+                animationRef = window.setInterval(animation, 50);
+                processRef = window.setInterval(process, 10);
+            }
+            //touch input
+            function leftf(){
+                pressed = 20;
+                left = 1;
+                player.moving = 1;
+                player.direction = 3;
+            }
+            function upf(){
+                pressed = 20;
+                up = 1;
+                player.moving = 1;
+                player.direction = 0;
+            }
+            function downf(){
+                pressed = 20;
+                down = 1;
+                player.moving = 1;
+                player.direction = 2;
+            }
+            function rightf(){
+                pressed = 20;
+                right = 1;
+                player.moving = 1;
+                player.direction = 1;
+            }
+            function shootf(){
+                player.shootStart = 1;
+            }
+
+            function animation(){
+                player.shootAni();
+                player.moveAnim();
+                for(var i = 0; i < numOfEnemies; i++){
+                    enemy[i].shootAni();
+                    enemy[i].moveAnim();
+                }
+            }
+            function process(){
+                
+                //keyboard input
+                if(keys.left)
+                    player.moveLeft();
+                else if(keys.right)
+                    player.moveRight();
+                else if(keys.up)
+                    player.moveUp();
+                else if(keys.down)
+                    player.moveDown();
+                //touch input
+                if(pressed > 0){
+                    pressed--;
+                    if(left)
+                        player.moveLeft();
+                    else if(right)
+                        player.moveRight();
+                    else if(up)
+                        player.moveUp();
+                    else if(down)
+                        player.moveDown();
+                }
+                if(pressed == 1){
+                    left = 0;
+                    right = 0;
+                    down = 0;
+                    up = 0;
+                    player.moving = 0;
+                }
+
+                //player stuff
+                if((player.shootStart) && (playerbullet.start == 0)){
+                    player.shoot = 6;
+                    player.shootStart = 0;
+                }
+                if(playerbullet.start == 1){
+                    playerbullet.flyingBullet();
+                }
+                //player tank hit check
+                for(var i = 0; i < numOfEnemies; i++){
+                    if((player.hitBoxXMax > enemybullet[i].positionAbsoluteX) && (player.hitBoxXMin < enemybullet[i].positionAbsoluteX)){
+                        if((player.hitBoxYMax > enemybullet[i].positionAbsoluteY) && (player.hitBoxYMin < enemybullet[i].positionAbsoluteY)){
+                            player.destroyed = 1;
+                            document.getElementById("player").setAttribute("src","TankWar_assets/player_Dead.png");
+                            clearInterval(aiRef);
+                            clearInterval(animationRef);
+                            clearInterval(processRef);
+                            gameLost = 1;
+                        }
+                    }
+                }
+                //enemy stuff
+                for(var i = 0; i < numOfEnemies; i++){
+                    if((enemy[i].shootStart) && (enemybullet[i].start == 0)){
+                        enemy[i].shoot = 6;
+                        enemy[i].shootStart = 0;
+                    }
+                    if(enemybullet[i].start == 1){
+                        enemybullet[i].flyingBullet();
+                    }
+                    //enemy tank hit check
+                    if((enemy[i].hitBoxXMax > playerbullet.positionAbsoluteX) && (enemy[i].hitBoxXMin < playerbullet.positionAbsoluteX)){
+                        if((enemy[i].hitBoxYMax > playerbullet.positionAbsoluteY) && (enemy[i].hitBoxYMin < playerbullet.positionAbsoluteY)){
+                            enemy[i].destroyed = 1;
+                        }
+                    }
+                }
+                //check for next level
+                numOfDestroyed = 0;
+                
+                for(var i = 0; i < numOfEnemies; i++){
+                    if(enemy[i].destroyed == 1)
+                        numOfDestroyed++;
+                    if(numOfDestroyed == (3 * (onLevel + 1))){
+                        nextLevel();
+                    }
+                }
+                document.getElementById("score").innerHTML = "<h1> Score: " + (score) + "</h1>";
+                if(gameLost)
+                    lose();
+            }
+            //control of enemies
+            function ai(){
+                for(var i = 0; i < numOfEnemies; i++){
+                    if(enemy[i].aiTimer > 0){
+                        if(enemy[i].choice == 0){
+                            enemy[i].moving = 0;
+                        }
+                        else if(enemy[i].choice == 1){
+                            enemy[i].moveLeft();
+                            enemy[i].moving = 1;
+                        }
+                        else if(enemy[i].choice == 2){
+                            enemy[i].moveRight();
+                            enemy[i].moving = 1;
+                        }
+                        else if(enemy[i].choice == 3){
+                            enemy[i].moveUp();
+                            enemy[i].moving = 1;
+                        }
+                        else if(enemy[i].choice == 4){
+                            enemy[i].moveDown();
+                            enemy[i].moving = 1;
+                        }
+                        else if(enemy[i].choice > 4){
+                            enemy[i].shootStart = 1;
+                            enemy[i].aiTimer = 0;
+                        }
+                        enemy[i].aiTimer--;
+                    }
+                    else{
+                        enemy[i].moving = 0;
+                        if(onLevel <= 2){
+                            enemy[i].aiTimer = 50;
+                            enemy[i].choice = Math.floor( 0 + Math.random() * 6);
+                        }
+                        else if(onLevel > 2){
+                            enemy[i].aiTimer = 50;
+                            enemy[i].choice = Math.floor( 0 + Math.random() * 7);
+                        }
+                        else if(onLevel > 4){
+                            enemy[i].aiTimer = 25;
+                            enemy[i].choice = Math.floor( 0 + Math.random() * 10);
+                        }
+                        else if(onLevel > 5){
+                            enemy[i].aiTimer = 25;
+                            enemy[i].choice = Math.floor( 0 + Math.random() * 20);
+                        }
+                    }
+                }
+
+            }
+            
+            class Enemy{
+                constructor(type){
+                    this.aiTimer = 50;
+                    this.choice = 0;
+                    this.moveAni = 0;
+                    this.start = 0;
+                    this.number = type;
+                    this.direction = 1; // 0 up, 1 right, 2 down, 3 left,
+                    this.shoot = 0;
+                    this.moving = 0;
+                    this.positionBlockX = spawnPoint1x;
+                    this.positionBlockY = spawnPoint1y;
+                    this.positionWithInBlockX = 0;
+                    this.positionWithInBlockY = 0;
+                    this.positionAbsoluteX = 0;
+                    this.positionAbsoluteY = 0;
+                    this.hitBoxXMax = 0;
+                    this.hitBoxXMin = 0;
+                    this.hitBoxYMax = 0;
+                    this.hitBoxYMin = 0;
+                    this.destroyed = 0;
+                    this.scoreplus = 0;
+                    this.destroyTimer = 100;
+                    this.updatePosition();
+                }
+                updatePosition(){
+                    occupiedBlock[this.number][0] = this.positionBlockX;
+                    occupiedBlock[this.number][1] = this.positionBlockY;
+
+                    if(this.destroyed == 0){
+                        this.positionAbsoluteX = (this.positionBlockX * 75) + this.positionWithInBlockX;
+                        this.positionAbsoluteY = (this.positionBlockY * 75) + this.positionWithInBlockY;
+                        this.hitBoxXMax = this.positionAbsoluteX + 25;
+                        this.hitBoxXMin = this.positionAbsoluteX - 25;
+                        this.hitBoxYMax = this.positionAbsoluteY + 25;
+                        this.hitBoxYMin = this.positionAbsoluteY - 25;
+                        document.getElementById("enemy" + this.number).style.top = this.positionAbsoluteY;
+                        document.getElementById("enemy" + this.number).style.left = this.positionAbsoluteX;
+                        document.getElementById("enemy" + this.number).style.zIndex = "1";
+                    }
+                    else{
+                        if(this.scoreplus == 0){
+                            score++;
+                            this.scoreplus = 1;
+                        }   
+                    }
+                }
+                moveLeft(){
+                    this.direction = 3;
+                    var check = 0;
+                    if(this.positionWithInBlockX > 0){
+                            this.positionWithInBlockX -= 3;
+                    }
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != this.number){
+                                if((occupiedBlock[this.number][0] - 1) == (occupiedBlock[i][0])){
+                                    if(occupiedBlock[this.number][1] == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockY < -15)){
+                            
+                            }
+                            else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockY > 15)){
+                                
+                            }
+                            else if(arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] <= 0){
+                                this.positionWithInBlockX += 75;
+                                this.positionBlockX --;
+                                this.positionWithInBlockX -= 3;
+                            }   
+                        }  
+                    }
+                    this.updatePosition();
+                }
+                moveRight(){
+                    this.direction = 1;
+                    var check = 0;
+                    this.direction = 1;
+                    if(this.positionWithInBlockX < 30){
+                            this.positionWithInBlockX += 3; 
+                    }
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != this.number){
+                                if((occupiedBlock[this.number][0] + 1) == (occupiedBlock[i][0])){
+                                    if(occupiedBlock[this.number][1] == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockY < -15)){
+                                
+                            }
+                            else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockY > 15)){
+                                
+                            }
+                            else if((arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] <= 0)){
+                                this.positionWithInBlockX -= 75;
+                                this.positionBlockX ++;
+                                this.positionWithInBlockX += 3;
+                            }
+                        }
+                    }
+                    this.updatePosition();
+                }
+                moveUp(){
+                    this.direction = 0;
+                    var check = 0;
+                    if(this.positionWithInBlockY > -15){
+                            this.positionWithInBlockY -= 3;
+                    }
+                    
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != this.number){
+                                if((occupiedBlock[this.number][0]) == (occupiedBlock[i][0])){
+                                    if((occupiedBlock[this.number][1] - 1) == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockX > 30)){
+                            
+                            }
+                            else if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockX < 0)){
+                                
+                            }
+                            else if(arrayOfScreen[this.positionBlockY - 1][this.positionBlockX] <= 0){
+                                this.positionWithInBlockY += 75;
+                                this.positionBlockY --;
+                                this.positionWithInBlockY -= 3;
+                            }    
+                        }    
+                    }
+                    this.updatePosition();
+                }
+                moveDown(){
+                    this.direction = 2;
+                    var check = 0;
+                    if(this.positionWithInBlockY < 15){
+                            this.positionWithInBlockY += 3;
+                    }
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != this.number){
+                                if((occupiedBlock[this.number][0]) == (occupiedBlock[i][0])){
+                                    if((occupiedBlock[this.number][1] + 1) == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockX > 30)){
+                            
+                            }
+                            else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockX < 0)){
+                                
+                            }
+                            else if(arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] <= 0){
+                                this.positionWithInBlockY -= 75;
+                                this.positionBlockY ++;
+                                this.positionWithInBlockY += 3;
+                            } 
+                        }
+                              
+                    }
+                    this.updatePosition();
+                }
+                moveAnim(){// 0 up, 1 right, 2 down, 3 left,
+                    if(this.destroyed == 0){
+                        if(this.moving){
+                        if(this.moveAni == 2){
+                            document.getElementById("enemy" + this.number).setAttribute("src","TankWar_assets/player" + (this.number % 10) +"0.png");
+                            this.moveAni = 1;
+                        }
+                        else{
+                            document.getElementById("enemy" + this.number).setAttribute("src","TankWar_assets/player" + (this.number % 10) +"1.png");
+                            this.moveAni = 2;
+                        }
+                        }
+                        if(this.direction == 3){
+                            document.getElementById("enemy" + this.number).style.transform = "rotate(" + 270 + "deg)";
+                        }
+                        if(this.direction == 1){
+                            document.getElementById("enemy" + this.number).style.transform = "rotate(" + 90 + "deg)";
+                        }
+                        if(this.direction == 0){
+                            document.getElementById("enemy" + this.number).style.transform = "rotate(" + 0 + "deg)";
+                        }
+                        if(this.direction == 2){
+                            document.getElementById("enemy" + this.number).style.transform = "rotate(" + 180 + "deg)";
+                        }
+                    }
+                    else if(this.destroyed && (this.destroyTimer > 0)){
+                        document.getElementById("enemy" + this.number).setAttribute("src","TankWar_assets/player_Dead.png");
+                        this.destroyTimer--;
+                    }
+                    else {
+                        document.getElementById("enemy" + this.number).setAttribute("src","TankWar_assets/nothing.png");
+                        document.getElementById("bullet" + this.number).setAttribute("src","TankWar_assets/nothing.png");
+                        this.positionBlockX = 1;
+                        this.positionBlockY = 12;
+                    }
+                    
+                }
+                shootAni(){// 0 up, 1 right, 2 down, 3 left,
+                    if(this.destroyed == 0){
+                        var bulletpositionX = 0;
+                        var bulletpositionY = 0;
+                        if(this.direction == 3){
+                            bulletpositionX = -25;
+                        }
+                        else if(this.direction == 2){
+                            bulletpositionY = 25;
+                        }
+                        else if(this.direction == 1){
+                            bulletpositionX = 25;
+                        }
+                        else{
+                            bulletpositionY = -25;
+                        }
+                        if(this.shoot == 6){
+                            this.shoot--;
+                            document.getElementById("bullet" + this.number ).setAttribute("src","TankWar_assets/shoot0.png");
+                            document.getElementById("bullet" + this.number ).style.top = this.positionAbsoluteY + bulletpositionY;
+                            document.getElementById("bullet" + this.number ).style.left = this.positionAbsoluteX + bulletpositionX;
+                        }
+                        else if(this.shoot == 5){
+                            this.shoot--;
+                            document.getElementById("bullet" + this.number ).setAttribute("src","TankWar_assets/shoot0.png");
+                            document.getElementById("bullet" + this.number ).style.top = this.positionAbsoluteY + bulletpositionY;
+                            document.getElementById("bullet" + this.number ).style.left = this.positionAbsoluteX + bulletpositionX;
+                        }
+                        else if(this.shoot == 4){
+                            this.shoot--;
+                            document.getElementById("bullet" + this.number ).setAttribute("src","TankWar_assets/shoot0.png");
+                            document.getElementById("bullet" + this.number ).style.top = this.positionAbsoluteY + bulletpositionY;
+                            document.getElementById("bullet" + this.number ).style.left = this.positionAbsoluteX + bulletpositionX;
+                        }
+                        else if(this.shoot == 3){
+                            this.shoot--;
+                            document.getElementById("bullet" + this.number ).setAttribute("src","TankWar_assets/shoot1.png");
+                            document.getElementById("bullet" + this.number ).style.top = this.positionAbsoluteY + bulletpositionY;
+                            document.getElementById("bullet" + this.number ).style.left = this.positionAbsoluteX + bulletpositionX;
+                        }
+                        else if(this.shoot == 2){
+                            this.shoot--;
+                            document.getElementById("bullet" + this.number ).setAttribute("src","TankWar_assets/shoot1.png");
+                            document.getElementById("bullet" + this.number ).style.top = this.positionAbsoluteY + bulletpositionY;
+                            document.getElementById("bullet" + this.number ).style.left = this.positionAbsoluteX + bulletpositionX;
+                        }
+                        else if(this.shoot == 1){
+                            this.shoot--;
+                            document.getElementById("bullet" + this.number ).setAttribute("src","TankWar_assets/shoot1.png");
+                            document.getElementById("bullet" + this.number ).style.top = this.positionAbsoluteY + bulletpositionY;
+                            document.getElementById("bullet" + this.number ).style.left = this.positionAbsoluteX + bulletpositionX;
+                            enemybullet[this.number - 1].start = 1;
+                            enemybullet[this.number - 1].direction = this.direction;
+                            enemybullet[this.number - 1].positionBlockX = this.positionBlockX;
+                            enemybullet[this.number - 1].positionBlockY = this.positionBlockY;
+                            enemybullet[this.number - 1].positionWithInBlockX = this.positionWithInBlockX;
+                            enemybullet[this.number - 1].positionWithInBlockY =  this.positionWithInBlockY;
+                        }
+                        else{
+                            
+                        }
+                    }
+                }
+            }
+            class Player{
+                constructor(type){
+                    this.direction = 0; // 0 up, 1 right, 2 down, 3 left,
+                    this.shoot = 0;
+                    this.shootStart = 0;
+                    this.moving = 0;
+                    this.movingAni = 0;
+                    this.positionBlockX = playerSpawnx;
+                    this.positionBlockY = playerSpawny;
+                    this.positionWithInBlockX = 0;
+                    this.positionWithInBlockY = 0;
+                    this.positionAbsoluteX = 0;
+                    this.positionAbsoluteY = 0;
+                    this.hitBoxXMax = 0;
+                    this.hitBoxXMin = 0;
+                    this.hitBoxYMax = 0;
+                    this.hitBoxYMin = 0;
+                    this.destroyed = 0;
+                    this.updatePosition();
+                }
+                updatePosition(){
+                    occupiedBlock[0][0] = this.positionBlockX;
+                    occupiedBlock[0][1] = this.positionBlockY;
+                    this.positionAbsoluteX = (this.positionBlockX * 75) + this.positionWithInBlockX;
+                    this.positionAbsoluteY = (this.positionBlockY * 75) + this.positionWithInBlockY;
+                    this.hitBoxXMax = this.positionAbsoluteX + 25;
+                    this.hitBoxXMin = this.positionAbsoluteX - 25;
+                    this.hitBoxYMax = this.positionAbsoluteY + 25;
+                    this.hitBoxYMin = this.positionAbsoluteY - 25;
+                    document.getElementById("player").style.top = this.positionAbsoluteY;
+                    document.getElementById("player").style.left = this.positionAbsoluteX;
+                    document.getElementById("player").style.zIndex = "1";
+                    
+                    if(this.destroyed){
+                        document.getElementById("player").setAttribute("src","TankWar_assets/player_Dead.png");
+                    }
+                }
+                moveLeft(){
+                    var check = 0;
+                    if(this.positionWithInBlockX > 0){
+                            this.positionWithInBlockX -= 3;
+                    }
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != 0){
+                                if((occupiedBlock[0][0] - 1) == (occupiedBlock[i][0])){
+                                    if(occupiedBlock[0][1] == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockY < -15)){
+                            
+                            }
+                            else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockY > 15)){
+                                
+                            }
+                            else if(arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] <= 0){
+                                this.positionWithInBlockX += 75;
+                                this.positionBlockX --;
+                                this.positionWithInBlockX -= 3;
+                            }   
+                        }  
+                    }
+                    this.updatePosition();
+                }
+                moveRight(){
+                    var check = 0;
+                    this.direction = 1;
+                    if(this.positionWithInBlockX < 30){
+                            this.positionWithInBlockX += 3; 
+                    }
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != 0){
+                                if((occupiedBlock[0][0] + 1) == (occupiedBlock[i][0])){
+                                    if(occupiedBlock[0][1] == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockY < -15)){
+                                
+                            }
+                            else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockY > 15)){
+                                
+                            }
+                            else if((arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] <= 0)){
+                                this.positionWithInBlockX -= 75;
+                                this.positionBlockX ++;
+                                this.positionWithInBlockX += 3;
+                            }
+                        }
+                    }
+                    this.updatePosition();
+                }
+                moveUp(){
+                    var check = 0;
+                    if(this.positionWithInBlockY > -15){
+                            this.positionWithInBlockY -= 3;
+                    }
+                    
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != 0){
+                                if((occupiedBlock[0][0]) == (occupiedBlock[i][0])){
+                                    if((occupiedBlock[0][1] - 1) == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockX > 30)){
+                            
+                            }
+                            else if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockX < 0)){
+                                
+                            }
+                            else if(arrayOfScreen[this.positionBlockY - 1][this.positionBlockX] <= 0){
+                                this.positionWithInBlockY += 75;
+                                this.positionBlockY --;
+                                this.positionWithInBlockY -= 3;
+                            }    
+                        }    
+                    }
+                    this.updatePosition();
+                }
+                moveDown(){
+                    var check = 0;
+                    if(this.positionWithInBlockY < 15){
+                            this.positionWithInBlockY += 3;
+                    }
+                    else{
+                        //collision check
+                        for(var i = 0; i < numOfEnemies + 1; i++){
+                            if(i != 0){
+                                if((occupiedBlock[0][0]) == (occupiedBlock[i][0])){
+                                    if((occupiedBlock[0][1] + 1) == (occupiedBlock[i][1])){
+                                        check = 1;
+                                    }
+                                }
+                            }
+                        }
+                        if(check == 0){
+                            //block check
+                            if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockX > 30)){
+                            
+                            }
+                            else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockX < 0)){
+                                
+                            }
+                            else if(arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] <= 0){
+                                this.positionWithInBlockY -= 75;
+                                this.positionBlockY ++;
+                                this.positionWithInBlockY += 3;
+                            } 
+                        }
+                              
+                    }
+                    this.updatePosition();
+                }
+                moveAnim(){
+                    if(this.moving){
+                        if(this.movingAni == 2){
+                            document.getElementById("player").setAttribute("src","TankWar_assets/player00.png");
+                            this.movingAni--;
+                        }
+                        else if(this.movingAni == 1){
+                            document.getElementById("player").setAttribute("src","TankWar_assets/player01.png");
+                            this.movingAni--;
+                        }
+                        else{
+                            this.movingAni = 2;
+                        }
+                    }
+                    if(this.direction == 3){
+                        document.getElementById("player").style.transform = "rotate(" + 270 + "deg)";
+                    }
+                    if(this.direction == 1){
+                        document.getElementById("player").style.transform = "rotate(" + 90 + "deg)";
+                    }
+                    if(this.direction == 0){
+                        document.getElementById("player").style.transform = "rotate(" + 0 + "deg)";
+                    }
+                    if(this.direction == 2){
+                        document.getElementById("player").style.transform = "rotate(" + 180 + "deg)";
+                    }
+                }
+                shootAni(){// 0 up, 1 right, 2 down, 3 left,
+                    var bulletpositionX = 0;
+                    var bulletpositionY = 0;
+                    if(this.direction == 3){
+                        bulletpositionX = -25;
+                    }
+                    else if(this.direction == 2){
+                        bulletpositionY = 25;
+                    }
+                    else if(this.direction == 1){
+                        bulletpositionX = 25;
+                    }
+                    else{
+                        bulletpositionY = -25;
+                    }
+                    if(this.shoot == 6){
+                        this.shoot--;
+                        document.getElementById("bullet0").setAttribute("src","TankWar_assets/shoot0.png");
+                        document.getElementById("bullet0").style.top = this.positionAbsoluteY + bulletpositionY;
+                        document.getElementById("bullet0").style.left = this.positionAbsoluteX + bulletpositionX;
+                    }
+                    else if(this.shoot == 5){
+                        this.shoot--;
+                        document.getElementById("bullet0").setAttribute("src","TankWar_assets/shoot0.png");
+                        document.getElementById("bullet0").style.top = this.positionAbsoluteY + bulletpositionY;
+                        document.getElementById("bullet0").style.left = this.positionAbsoluteX + bulletpositionX;
+                    }
+                    else if(this.shoot == 4){
+                        this.shoot--;
+                        document.getElementById("bullet0").setAttribute("src","TankWar_assets/shoot0.png");
+                        document.getElementById("bullet0").style.top = this.positionAbsoluteY + bulletpositionY;
+                        document.getElementById("bullet0").style.left = this.positionAbsoluteX + bulletpositionX;
+                    }
+                    else if(this.shoot == 3){
+                        this.shoot--;
+                        document.getElementById("bullet0").setAttribute("src","TankWar_assets/shoot1.png");
+                        document.getElementById("bullet0").style.top = this.positionAbsoluteY + bulletpositionY;
+                        document.getElementById("bullet0").style.left = this.positionAbsoluteX + bulletpositionX;
+                    }
+                    else if(this.shoot == 2){
+                        this.shoot--;
+                        document.getElementById("bullet0").setAttribute("src","TankWar_assets/shoot1.png");
+                        document.getElementById("bullet0").style.top = this.positionAbsoluteY + bulletpositionY;
+                        document.getElementById("bullet0").style.left = this.positionAbsoluteX + bulletpositionX;
+                    }
+                    else if(this.shoot == 1){
+                        this.shoot--;
+                        document.getElementById("bullet0").setAttribute("src","TankWar_assets/shoot1.png");
+                        document.getElementById("bullet0").style.top = this.positionAbsoluteY + bulletpositionY;
+                        document.getElementById("bullet0").style.left = this.positionAbsoluteX + bulletpositionX;
+                        playerbullet.start = 1;
+                        playerbullet.direction = this.direction;
+                        playerbullet.positionBlockX = this.positionBlockX;
+                        playerbullet.positionBlockY = this.positionBlockY;
+                        playerbullet.positionWithInBlockX = this.positionWithInBlockX;
+                        playerbullet.positionWithInBlockY =  this.positionWithInBlockY;
+                    }
+                    else{
+                        
+                    }
+                }
+            }
+            
+            class Bullet{
+                constructor(type){
+                    this.start = 0;
+                    this.finish = 1;
+                    this.positionBlockX = 0;
+                    this.positionBlockY = 0;
+                    this.positionWithInBlockX = 0;
+                    this.positionWithInBlockY = 0;
+                    this.positionAbsoluteX = 0;
+                    this.positionAbsoluteY = 0;
+                    this.direction = 0;
+                    this.hit = 0;
+                    this.number = type;
+                    this.hitblockX = 0;
+                    this.hitblockY = 0;
+                }
+                //place real blocks on the map, testing only around the map //grass = -1 solid == 1, brick0 == 2, brick1 == 3, brick2 == 4 glass0 == 5, glass1 == 6, statue == 8 
+                destroyBlock(){
+                    if(arrayOfScreen[this.hitblockY][this.hitblockX] == 2){
+                        arrayOfScreen[this.hitblockY][this.hitblockX] = 3;
+                        redraw();
+                    }
+                    else if(arrayOfScreen[this.hitblockY][this.hitblockX] == 3){
+                        arrayOfScreen[this.hitblockY][this.hitblockX] = 4;
+                        redraw();
+                    }
+                    else if(arrayOfScreen[this.hitblockY][this.hitblockX] == 4){
+                        arrayOfScreen[this.hitblockY][this.hitblockX] = 0;
+                        redraw();
+                    }
+                    else if(arrayOfScreen[this.hitblockY][this.hitblockX] == 5){
+                        arrayOfScreen[this.hitblockY][this.hitblockX] = 6;
+                        redraw();
+                    }
+                    else if(arrayOfScreen[this.hitblockY][this.hitblockX] == 6){
+                        arrayOfScreen[this.hitblockY][this.hitblockX] = 0;
+                        redraw();
+                    }
+                    else if(arrayOfScreen[this.hitblockY][this.hitblockX] == 8){
+                        arrayOfScreen[this.hitblockY][this.hitblockX] = 9;
+                        redraw();
+                        clearInterval(aiRef);
+                        clearInterval(animationRef);
+                        clearInterval(processRef);
+                        gameLost = 1;
+                    }
+                }
+                updatePosition(){
+                    this.positionAbsoluteX = (this.positionBlockX * 75) + this.positionWithInBlockX;
+                    this.positionAbsoluteY = (this.positionBlockY * 75) + this.positionWithInBlockY;
+                    document.getElementById("bullet" + this.number).setAttribute("src","TankWar_assets/bullet.png");
+                    document.getElementById("bullet" + this.number).style.top = this.positionAbsoluteY;
+                    document.getElementById("bullet" + this.number).style.left = this.positionAbsoluteX;
+                    if(this.hit == 1){
+                        this.destroyBlock();
+                        this.positionAbsoluteX = 0;
+                        this.positionAbsoluteY = 0;
+                        this.hit = 0;
+                    }
+                }
+                flyingBullet(){
+                    if(this.start) { // 0 up, 1 right, 2 down, 3 left,
+                        //alert("fired");
+                        if(this.direction == 0){
+                            document.getElementById("bullet" + this.number).style.transform = "rotate(" + 0 + "deg)";
+                            if(this.positionWithInBlockY > -15){
+                                this.positionWithInBlockY -= 5;
+                            }
+                            else{
+                                if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockX > 46)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX + 1;
+                                    this.hitblockY = this.positionBlockY - 1;
+                                }
+                                else if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockX < -16)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX - 1;
+                                    this.hitblockY = this.positionBlockY - 1;
+                                }
+                                else if(arrayOfScreen[this.positionBlockY - 1][this.positionBlockX] <= 0){
+                                    this.positionWithInBlockY += 75;
+                                    this.positionBlockY --;
+                                    this.positionWithInBlockY -= 5;
+                                }
+                                else{
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX;
+                                    this.hitblockY = this.positionBlockY - 1;
+                                } 
+                            }
+                        }
+                        if(this.direction == 2){
+                            document.getElementById("bullet" + this.number).style.transform = "rotate(" + 180 + "deg)";
+                            if(this.positionWithInBlockY < 15){
+                                this.positionWithInBlockY += 5;
+                            }
+                            else{
+                                if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockX > 46)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX + 1;
+                                    this.hitblockY = this.positionBlockY + 1;
+                                }
+                                else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockX < -16)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX - 1;
+                                    this.hitblockY = this.positionBlockY + 1;
+                                }
+                                else if(arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] <= 0){
+                                    this.positionWithInBlockY -= 75;
+                                    this.positionBlockY ++;
+                                    this.positionWithInBlockY += 5;
+                                }
+                                else{
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX;
+                                    this.hitblockY = this.positionBlockY + 1;
+                                } 
+                            }
+                        }
+                        if(this.direction == 1){
+                            document.getElementById("bullet" + this.number).style.transform = "rotate(" + 90 + "deg)";
+                            if(this.positionWithInBlockX < 30){
+                                this.positionWithInBlockX += 5;
+                            }
+                            else{
+                                if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockY < -23)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX + 1;
+                                    this.hitblockY = this.positionBlockY - 1;
+                                }
+                                else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX + 1] > 0) && (this.positionWithInBlockY > 45)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX + 1;
+                                    this.hitblockY = this.positionBlockY + 1;
+                                }
+                                else if(arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] <= 0){
+                                    this.positionWithInBlockX -= 75;
+                                    this.positionBlockX ++;
+                                    this.positionWithInBlockX += 5;
+                                }
+                                else{
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX + 1;
+                                    this.hitblockY = this.positionBlockY;
+                                } 
+                            }
+                        }
+                        if(this.direction == 3){
+                            document.getElementById("bullet" + this.number).style.transform = "rotate(" + 270 + "deg)";
+                            if(this.positionWithInBlockX > 0){
+                                this.positionWithInBlockX -= 5;
+                            }
+                            else{
+                                if((arrayOfScreen[this.positionBlockY - 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockY < -23)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX - 1;
+                                    this.hitblockY = this.positionBlockY - 1;
+                                }
+                                else if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX - 1] > 0) && (this.positionWithInBlockY > 45)){
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX - 1;
+                                    this.hitblockY = this.positionBlockY + 1;
+                                }
+                                else if(arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] <= 0){
+                                    this.positionWithInBlockX += 75;
+                                    this.positionBlockX --;
+                                    this.positionWithInBlockX -= 5;
+                                }
+                                else{
+                                    this.start = 0;
+                                    this.hit = 1;
+                                    this.hitblockX = this.positionBlockX - 1;
+                                    this.hitblockY = this.positionBlockY;
+                                } 
+                            }
+                        }
+                        this.updatePosition();
+                    }
+                    if(this.start == 0){
+                        document.getElementById("bullet" + this.number).setAttribute("src","TankWar_assets/nothing.png");
+                    }
+                }
+            }
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+        <div id = "screen" style = " width: 1575px; height: 975px;">
+            <img src = "TankWar_assets/player01.png" id = "player" width = "70px" height = "70px" style = "position : absolute; z-index: 0;">
+            <img src = "TankWar_assets/nothing.png" id = "enemy1" width = "70px" height = "70px" style = "position : absolute; z-index: 0;">
+            <img src = "TankWar_assets/nothing.png" id = "enemy2" width = "70px" height = "70px" style = "position : absolute; z-index: 0;">
+            <img src = "TankWar_assets/nothing.png" id = "enemy3" width = "70px" height = "70px" style = "position : absolute; z-index: 0;">
+            <img src = "TankWar_assets/nothing.png" id = "bullet0" width = "70px" height = "70px" style = "position : absolute; z-index: 1;">
+            <img src = "TankWar_assets/nothing.png" id = "bullet1" width = "70px" height = "70px" style = "position : absolute; z-index: 1;">
+            <img src = "TankWar_assets/nothing.png" id = "bullet2" width = "70px" height = "70px" style = "position : absolute; z-index: 1;">
+            <img src = "TankWar_assets/nothing.png" id = "bullet3" width = "70px" height = "70px" style = "position : absolute; z-index: 1;">
+        </div>
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="leftf();">
+                        </th>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="upf();">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="rightf();"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_fire.png width = "250px" height = "200px" onclick ="shootf();"> 
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>HighScores</h1></div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_down.png width = "250px" height = "125px" onclick ="downf();">
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            <img src = "TankWar_assets/player01.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player00.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player10.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player11.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player20.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player21.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player31.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player30.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player40.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player41.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player50.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player51.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player61.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player60.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player70.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player71.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player80.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player81.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player90.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player91.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/brick0.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/brick1.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/brick2.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/bullet.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/glass0.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/glass1.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/grass.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/solid.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/nothing.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/player_Dead.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/statue.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/shoot0.png" width = "10px" height = "10px">
+            <img src = "TankWar_assets/shoot1.png" width = "10px" height = "10px">
+        </div>
+    </body>
+</html>
