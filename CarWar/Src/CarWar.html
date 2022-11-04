@@ -1,0 +1,648 @@
+<html>
+    <head>
+        <style>
+
+            img {
+                max-width: 100%;
+            }
+        </style>
+        <script>
+            var score = 0;
+            var speed = 400;
+            var numOfCars = 1;
+            var opponentArray = new Array();
+            var positionX = 5;
+            var prevPositionX = 5;
+            var lose = 0;
+            var loadref;
+            var leftref;
+            var rightref;
+            var leftref2;
+            var rightre2;
+            var leftref3;
+            var rightre3;
+            var leftref4;
+            var rightre4;
+            var left = 0;
+            var right = 0;
+            var dif1 = 8;
+            var dif2 = 5;
+            var dif3 = 3;
+            var dif4 = 2;
+            var waitperiod1 = 5;
+            var waitperiod2 = 10;
+            var waitperiod3 = 15;
+            var animationPosition;
+            var animationCount = 0;
+            var roadCount = 0;
+            var arrayOfScreen = new Array(20);
+            document.addEventListener('keydown', function(event) {
+            if(event.keyCode == 37) {
+                left = 1;
+            }
+            else if(event.keyCode == 39) {
+                right = 1;
+            }
+            });
+            function sendResult(){
+                var comment = document.getElementById("comment").value;
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        alert(comment + ", your result sent succesfully");
+                        window.location.reload(false); 
+                    }
+                };
+                xmlhttp.open("GET","../Assets/saveResultsCar.php?q=" + comment + "&r=" + score , true);
+                xmlhttp.send();
+		    }
+            function showScores() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("highscores").innerHTML = this.responseText;
+                    }
+                };
+                xmlhttp.open("GET","../Assets/getResultsCar.php",true);
+                xmlhttp.send();
+		    }
+
+            function start(){
+                opponentArray.push([5,0,0],[6,0,0],[7,0,0],[3,0,0]); //x,y
+                loadref = window.setInterval(load, speed);
+                roadref = window.setInterval(road, speed/20);
+                showScores();
+                var loadingArray  = 0;
+                var division = document.getElementById("screen");
+                var i = 200;
+                var j = 1;
+                while( j <= i){
+                    division.innerHTML += "<img src = ../Assets/blank_road.jpg id ='" + j + "' width = '10%' height = '4%'>";
+                    j++;      
+                }
+                //initializing stuff
+                for (var i = 0; i < arrayOfScreen.length; i++) { 
+                    arrayOfScreen[i] = []; 
+                } 
+                var h = 1;
+                for (var i = 0; i < 20; i++) { 
+                    for (var j = 0; j < 10; j++) { 
+                        arrayOfScreen[i][j] = h; //[y][x][prevx]
+                        h++;
+                    } 
+                }
+                var test = document.getElementById(arrayOfScreen[19][positionX]);
+                test.setAttribute("src","../Assets/car_forward.jpg");
+            }
+            function road(){
+                if(roadCount == 0){
+                    for(var i = 0; i < 20; i++){
+                        if(i%2 == 0){
+                            var test = document.getElementById(arrayOfScreen[i][0]);
+                            test.setAttribute("src","../Assets/road_farleft.jpg");
+                            test = document.getElementById(arrayOfScreen[i][1]);
+                            test.setAttribute("src","../Assets/road_leftbush.jpg");
+                            test = document.getElementById(arrayOfScreen[i][8]);
+                            test.setAttribute("src","../Assets/road_rightbush.jpg");
+                            test = document.getElementById(arrayOfScreen[i][9]);
+                            test.setAttribute("src","../Assets/road_farright.jpg");
+                        }
+                        else{
+                            var test = document.getElementById(arrayOfScreen[i][0]);
+                            test.setAttribute("src","../Assets/road_farleftbush.jpg");
+                            test = document.getElementById(arrayOfScreen[i][1]);
+                            test.setAttribute("src","../Assets/road_left.jpg");
+                            test = document.getElementById(arrayOfScreen[i][8]);
+                            test.setAttribute("src","../Assets/road_right.jpg");
+                            test = document.getElementById(arrayOfScreen[i][9]);
+                            test.setAttribute("src","../Assets/road_farrightbush.jpg");
+                        }
+                        
+                    }
+                    roadCount = 1;
+                }
+                else{
+                    for(var i = 0; i < 20; i++){
+                        if(i%2 != 0){
+                            var test = document.getElementById(arrayOfScreen[i][0]);
+                            test.setAttribute("src","../Assets/road_farleft.jpg");
+                            test = document.getElementById(arrayOfScreen[i][1]);
+                            test.setAttribute("src","../Assets/road_leftbush.jpg");
+                            test = document.getElementById(arrayOfScreen[i][8]);
+                            test.setAttribute("src","../Assets/road_rightbush.jpg");
+                            test = document.getElementById(arrayOfScreen[i][9]);
+                            test.setAttribute("src","../Assets/road_farright.jpg");
+                        }
+                        else{
+                            var test = document.getElementById(arrayOfScreen[i][0]);
+                            test.setAttribute("src","../Assets/road_farleftbush.jpg");
+                            test = document.getElementById(arrayOfScreen[i][1]);
+                            test.setAttribute("src","../Assets/road_left.jpg");
+                            test = document.getElementById(arrayOfScreen[i][8]);
+                            test.setAttribute("src","../Assets/road_right.jpg");
+                            test = document.getElementById(arrayOfScreen[i][9]);
+                            test.setAttribute("src","../Assets/road_farrightbush.jpg");
+                        }
+                        
+                    }
+                    roadCount = 0;
+                }
+            }
+            var AnimationCount4 = 0;
+            var AnimationCount3 = 0;
+            var AnimationCount2 = 0;
+            var AnimationCount1 = 0;
+            function leftAnimation1(){
+                if(animationCount1 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][2]]);
+                    test.setAttribute("src","../Assets/car1_left1.jpg");
+                }
+                if(animationCount1 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                    test.setAttribute("src","../Assets/car1_left2.jpg");
+                }
+                if(animationCount1 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                    test.setAttribute("src","../Assets/car1_left1.jpg");
+                }
+                if(animationCount1 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                    test.setAttribute("src","../Assets/car1_forward.jpg");
+                    clearInterval(leftref1);
+                } 
+                animationCount1++;
+            }
+            function rightAnimation1(){
+                if(animationCount1 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][2]]);
+                    test.setAttribute("src","../Assets/car1_right1.jpg");
+                }
+                if(animationCount1 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                    test.setAttribute("src","../Assets/car1_right2.jpg");
+                }
+                if(animationCount1 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                    test.setAttribute("src","../Assets/car1_right1.jpg");
+                }
+                if(animationCount1 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                    test.setAttribute("src","../Assets/car1_forward.jpg");
+                    clearInterval(rightref1);
+                } 
+                animationCount1++;
+            }
+
+            function leftAnimation2(){
+                if(animationCount2 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][2]]);
+                    test.setAttribute("src","../Assets/car2_left1.jpg");
+                }
+                if(animationCount2 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                    test.setAttribute("src","../Assets/car2_left2.jpg");
+                }
+                if(animationCount2 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                    test.setAttribute("src","../Assets/car2_left1.jpg");
+                }
+                if(animationCount2 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                    test.setAttribute("src","../Assets/car2_forward.jpg");
+                    clearInterval(leftref2);
+                } 
+                animationCount2++;
+            }
+            function rightAnimation2(){
+                if(animationCount2 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][2]]);
+                    test.setAttribute("src","../Assets/car2_right1.jpg");
+                }
+                if(animationCount2 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                    test.setAttribute("src","../Assets/car2_right2.jpg");
+                }
+                if(animationCount2 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                    test.setAttribute("src","../Assets/car2_right1.jpg");
+                }
+                if(animationCount2 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                    test.setAttribute("src","../Assets/car2_forward.jpg");
+                    clearInterval(rightref2);
+                } 
+                animationCount1++;
+            }
+            function leftAnimation3(){
+                if(animationCount3 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][2]]);
+                    test.setAttribute("src","../Assets/car3_left1.jpg");
+                }
+                if(animationCount3 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                    test.setAttribute("src","../Assets/car3_left2.jpg");
+                }
+                if(animationCount3 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                    test.setAttribute("src","../Assets/car3_left1.jpg");
+                }
+                if(animationCount3 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                    test.setAttribute("src","../Assets/car3_forward.jpg");
+                    clearInterval(leftref3);
+                } 
+                animationCount3++;
+            }
+            function rightAnimation3(){
+                if(animationCount3 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][2]]);
+                    test.setAttribute("src","../Assets/car3_right1.jpg");
+                }
+                if(animationCount3 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                    test.setAttribute("src","../Assets/car3_right2.jpg");
+                }
+                if(animationCount3 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                    test.setAttribute("src","../Assets/car3_right1.jpg");
+                }
+                if(animationCount3 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                    test.setAttribute("src","../Assets/car3_forward.jpg");
+                    clearInterval(rightref3);
+                } 
+                animationCount3++;
+            }
+
+            function leftAnimation4(){
+                if(animationCount4 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][2]]);
+                    test.setAttribute("src","../Assets/car4_left1.jpg");
+                }
+                if(animationCount4 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                    test.setAttribute("src","../Assets/car4_left2.jpg");
+                }
+                if(animationCount4 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                    test.setAttribute("src","../Assets/car4_left1.jpg");
+                }
+                if(animationCount4 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                    test.setAttribute("src","../Assets/car4_forward.jpg");
+                    clearInterval(leftref4);
+                } 
+                animationCount4++;
+            }
+            function rightAnimation4(){
+                if(animationCount4 == 0){ 
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][2]]);
+                    test.setAttribute("src","../Assets/car4_right1.jpg");
+                }
+                if(animationCount4 == 1){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][2]]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                    test.setAttribute("src","../Assets/car4_right2.jpg");
+                }
+                if(animationCount4 == 2){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                    test.setAttribute("src","../Assets/car4_right1.jpg");
+                }
+                if(animationCount4 == 3){
+                    var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                    test.setAttribute("src","../Assets/assets/car4_forward.jpg");
+                    clearInterval(rightref4);
+                } 
+                animationCount4++;
+            }
+            function load(){
+                //clearresidues
+                var scoreDisplay = document.getElementById("score");
+                    scoreDisplay.innerHTML = "<h1> Score: " + score + "</h1>";
+                for(var i = 2; i < 8; i++){
+                    for(var j = 0; j < 20; j ++){
+                        if((i == opponentArray[0][0]) && (j == opponentArray[0][1])){
+                            
+                        }
+                        else if((i == opponentArray[1][0]) && (j == opponentArray[1][1])){
+
+                        }
+                        else if((i == positionX) && (j == 19)){
+                            
+                        }
+                        else{
+                            var test = document.getElementById(arrayOfScreen[j][i]);
+                            test.setAttribute("src","../Assets/blank_road.jpg");
+                        }
+                    }
+                }
+                if((positionX == opponentArray[1][0]) && (19 == opponentArray[1][1])){lose = 1;}
+                if((positionX == opponentArray[2][0]) && (19 == opponentArray[2][1])){lose = 1;}
+                if((positionX == opponentArray[3][0]) && (19 == opponentArray[3][1])){lose = 1;}
+                if((positionX == opponentArray[0][0]) && (19 == opponentArray[0][1])){lose = 1;}
+
+                if(lose){
+                    alert("game over");
+                    clearInterval(loadref);
+                    clearInterval(roadref);
+                    var scoreDisplay = document.getElementById("score");
+                    scoreDisplay.innerHTML = "<h1>Your score is :" + score + "</h1>";
+                    if(score > 0){
+                        scoreDisplay.innerHTML += "Enter you name: <input type = 'text' id = 'comment'  placeholder = 'Name' style='width: 300px; height: 50px;'> ";
+                        scoreDisplay.innerHTML += "<input type = 'submit' onclick = 'sendResult()'>";
+                    }
+                    else{
+                        scoreDisplay.innerHTML += "<h1>Try again</h1>";
+                    }    
+                }
+                //opponent1 processing
+                test = document.getElementById(arrayOfScreen[(opponentArray[0][1])][(opponentArray[0][0])]);
+                test.setAttribute("src","../Assets/blank_road.jpg");
+                opponentArray[0][1] = opponentArray[0][1] + 1;
+                if(opponentArray[0][1] > 19){
+                    opponentArray[0][1] = 0;
+                    score++;
+                }
+                var test = document.getElementById(arrayOfScreen[opponentArray[0][1]][opponentArray[0][0]]);
+                test.setAttribute("src","../Assets/car1_forward.jpg");
+                var face = Math.floor( 0 + Math.random() * dif1);
+                if(opponentArray[0][1] < 18){
+                    opponentArray[0][2] = opponentArray[0][0];
+                    if(face == 0){
+                        if(opponentArray[0][0] < 7)
+                            opponentArray[0][0]++;
+                        leftref1 = window.setInterval(leftAnimation1,speed/10);
+                        animationCount1 = 0; 
+                    }
+                    else if(face == 1){
+                        if(opponentArray[0][0] > 2)
+                        opponentArray[0][0]--;
+                        rightref1 = window.setInterval(rightAnimation1,speed/10);
+                        animationCount1 = 0; 
+                    }
+                }
+                
+                // opponent2 processing
+                if(score > 1){
+                    if(waitperiod1 > 0){
+                        waitperiod1--;
+                    }
+                    else{
+                        test = document.getElementById(arrayOfScreen[(opponentArray[1][1])][(opponentArray[1][0])]);
+                        test.setAttribute("src","../Assets/blank_road.jpg");
+                        opponentArray[1][1] = opponentArray[1][1] + 1;
+                        if(opponentArray[1][1] > 19)
+                            opponentArray[1][1] = 0;
+
+                        var test = document.getElementById(arrayOfScreen[opponentArray[1][1]][opponentArray[1][0]]);
+                        test.setAttribute("src","../Assets/car2_forward.jpg");
+                        var face = Math.floor( 0 + Math.random() * dif2);
+                        if(opponentArray[1][1] < 18){
+                            opponentArray[1][2] = opponentArray[1][0];
+                            if(face == 0){
+                                if(opponentArray[1][0] < 7)
+                                    opponentArray[1][0]++;
+                                leftref2 = window.setInterval(leftAnimation2,speed/5);
+                                animationCount2 = 0; 
+                            }
+                            else if(face == 1){
+                                if(opponentArray[1][0] > 2)
+                                opponentArray[1][0]--;
+                                rightref2 = window.setInterval(rightAnimation2,speed/5);
+                                animationCount2 = 0; 
+                            }
+                        }
+                    }
+                }
+                if(score > 3){
+                    if(waitperiod2 > 0){
+                        waitperiod2--;
+                    }
+                    else{
+                        test = document.getElementById(arrayOfScreen[(opponentArray[2][1])][(opponentArray[2][0])]);
+                        test.setAttribute("src","../Assets/blank_road.jpg");
+                        opponentArray[2][1] = opponentArray[2][1] + 1;
+                        if(opponentArray[2][1] > 19)
+                            opponentArray[2][1] = 0;
+
+                        var test = document.getElementById(arrayOfScreen[opponentArray[2][1]][opponentArray[2][0]]);
+                        test.setAttribute("src","../Assets/car3_forward.jpg");
+                        var face = Math.floor( 0 + Math.random() * dif3);
+                        if(opponentArray[2][1] < 18){
+                            opponentArray[2][2] = opponentArray[2][0];
+                            if(face == 0){
+                                if(opponentArray[2][0] < 7)
+                                    opponentArray[2][0]++;
+                                leftref3 = window.setInterval(leftAnimation2,speed/5);
+                                animationCount3 = 0; 
+                            }
+                            else if(face == 1){
+                                if(opponentArray[2][0] > 2)
+                                opponentArray[2][0]--;
+                                rightref3 = window.setInterval(rightAnimation3,speed/5);
+                                animationCount3 = 0; 
+                            }
+                        }
+                    }
+                }
+                if(score > 5){
+                    if(waitperiod3 > 0){
+                        waitperiod3--;
+                    }
+                    else{
+                        test = document.getElementById(arrayOfScreen[(opponentArray[3][1])][(opponentArray[3][0])]);
+                        test.setAttribute("src","../Assets/blank_road.jpg");
+                        opponentArray[3][1] = opponentArray[3][1] + 1;
+                        if(opponentArray[3][1] > 19)
+                            opponentArray[3][1] = 0;
+
+                        var test = document.getElementById(arrayOfScreen[opponentArray[3][1]][opponentArray[3][0]]);
+                        test.setAttribute("src","../Assets/car4_forward.jpg");
+                        var face = Math.floor( 0 + Math.random() * dif4);
+                        if(opponentArray[3][1] < 18){
+                            opponentArray[3][2] = opponentArray[3][0];
+                            if(face == 0){
+                                if(opponentArray[3][0] < 7)
+                                    opponentArray[3][0]++;
+                                leftref4 = window.setInterval(leftAnimation4,speed/5);
+                                animationCount4 = 0; 
+                            }
+                            else if(face == 1){
+                                if(opponentArray[3][0] > 2)
+                                opponentArray[3][0]--;
+                                rightref4 = window.setInterval(rightAnimation4,speed/5);
+                                animationCount4 = 0; 
+                            }
+                        }
+                    }
+                }
+                if(score > 9){
+                    dif1 = 5;
+                    dif2 = 5;
+                    dif3 = 3;
+                }
+
+                if(score > 15){
+                    dif1 = 2;
+                    dif2 = 2;
+                    dif3 = 2;
+                }
+                if(!lose){
+                    if(score > 5){
+                        clearInterval(loadref);
+                        loadref = window.setInterval(load, speed/2);
+                    }
+                    if(score > 12){
+                            clearInterval(loadref);
+                            loadref = window.setInterval(load, speed/3);
+                    }
+                }
+                
+
+                
+                //player processing
+                if(left == 1){
+                    positionX--;
+                    left = 0;
+                }
+                if(right == 1){
+                    positionX++;
+                    right = 0;
+                }
+                if(positionX < 2)
+                    positionX = 2;
+                if(positionX > 7)
+                    positionX = 7;
+                if(prevPositionX > positionX){
+                    leftref = window.setInterval(leftAnimation, speed/10);
+                    animationCount = 0;
+                }
+                else if(prevPositionX < positionX){
+                    rightref = window.setInterval(rightAnimation, speed/10);
+                    animationCount = 0;
+                }
+                animationPosition = prevPositionX;
+                prevPositionX = positionX;
+            }
+            function leftAnimation(){
+                if(animationCount == 0){ 
+                    var test = document.getElementById(arrayOfScreen[19][animationPosition]);
+                    test.setAttribute("src","../Assets/car_left1.jpg");
+                }
+                if(animationCount == 1){
+                    var test = document.getElementById(arrayOfScreen[19][animationPosition]);
+                    test.setAttribute("src","../Assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[19][positionX]);
+                    test.setAttribute("src","../Assets/car_left2.jpg");
+                }
+                if(animationCount == 2){
+                    var test = document.getElementById(arrayOfScreen[19][positionX]);
+                    test.setAttribute("src","../Assets/car_left1.jpg");
+                }
+                if(animationCount == 3){
+                    var test = document.getElementById(arrayOfScreen[19][positionX]);
+                    test.setAttribute("src","../Assets/car_forward.jpg");
+                    clearInterval(leftref);
+                } 
+                animationCount++;
+            }
+            function rightAnimation(){
+                if(animationCount == 0){ 
+                    var test = document.getElementById(arrayOfScreen[19][animationPosition]);
+                    test.setAttribute("src","../Assets/car_right1.jpg");
+                }
+                if(animationCount == 1){
+                    var test = document.getElementById(arrayOfScreen[19][animationPosition]);
+                    test.setAttribute("src","../assets/blank_road.jpg");
+                    test = document.getElementById(arrayOfScreen[19][positionX]);
+                    test.setAttribute("src","../Assets/car_right2.jpg");
+                }
+                if(animationCount == 2){
+                    var test = document.getElementById(arrayOfScreen[19][positionX]);
+                    test.setAttribute("src","../Assets/car_right1.jpg");
+                }
+                if(animationCount == 3){
+                    var test = document.getElementById(arrayOfScreen[19][positionX]);
+                    test.setAttribute("src","../Assets/car_forward.jpg");
+                    clearInterval(rightref);
+                } 
+                animationCount++;
+            }
+            window.addEventListener("load",start,false);   
+            //direction facing  //for direction-- up == 0, right == 1, down == 2, left == 3
+        </script>
+    </head>
+    <body>
+        
+        <div id = "screen" style = "width: 500px; height: 1000px;">
+        </div>
+        <div id = "controls" style = "width: 50%; height :30%">
+                <table align = "left" table border = "1" style = "background-color: white; ">
+                    <tbody>
+                        <tr>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="left = 1;">
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="right = 1;"> 
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <div id = "score"><h1>Score: 0</h1></div>
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <div id = "highscores"><h1>HighScores</h1></div>
+                            </th>
+                        </tr>            
+                    </tbody>
+                </table>
+        </div>
+        <div id = "assets">
+            <img src = ../Assets/car_forward.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car_left1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car_left2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car_right1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car_right2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car1_forward.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car1_left1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car1_left2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car1_right1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car1_right2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car2_left1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car2_left2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car2_right1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car2_right2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car3_left1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car3_left2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car3_right1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car3_right2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car4_left1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car4_left2.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car4_right1.jpg width = "20px" height = "20px">
+            <img src = ../Assets/car4_right2.jpg width = "20px" height = "20px">
+
+        </div>
+    </body>
+</html>
