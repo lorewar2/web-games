@@ -1,0 +1,670 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=1575px, user-scalable=no" />
+        <style>
+            body{
+                overflow: hidden;
+            }
+        </style>
+        <script>
+
+            //to do
+            //draw a basic map - done
+            //make the player move around the map - done
+            //add collisions with out of bound - done
+            //acceleraton and speed implement - done
+            //slow down in grass (out of road and in turn grass) - done
+            //canvas for display - done
+            //map image rotation etc - done
+            //implement laptimes and checkpoints etc - done
+            //opponent implementation - done
+            //opponent ai - done
+            //opponent display - done barely
+            //collsion with opponents (destroy the player) - done
+            //add more content... levels, road types, opponent types - fuck no
+            //finialize
+            
+            var player;
+            var opponent;
+            var processRef;
+            var level = new Array(5);
+            var arrayOfScreen = new Array(14);
+            var currentLevel = 0;
+            var roadSpeed = 3;
+            var grassSpeed = 0.5;
+            var debug = 0;
+
+            //opponent stuff
+            var opponentTimer = 0;
+            var opponentX = 0;
+            var opponentY = 0;
+            //checkpoint stuff
+            var checkPointsX = new Array(4);
+            var checkPointsY = new Array(4);
+            checkPointsX[0] = 1390;
+            checkPointsY[0] = 700;
+            checkPointsX[1] = 765;
+            checkPointsY[1] = 785;
+            checkPointsX[2] = 488;
+            checkPointsY[2] = 478;
+            checkPointsX[3] = 900;
+            checkPointsY[3] = 200;
+
+            //level config
+            level[0] = new Array(14);
+            level[1] = new Array(14);
+            level[2] = new Array(14);
+            level[3] = new Array(14);
+            level[4] = new Array(14);
+
+            //screen stuff
+            var gameCanvas;
+            var gameContext;
+            var textureCanvas;
+            var textureContext;
+            var screenWidth = 1440; //the real display width and height
+            var screenHeight = 960;
+            var displayWidth = 450; //the rotating display width and height (amount of content to be shown)
+            var displayHeight = 300;
+            var zoom = screenWidth / displayWidth;
+            var currentAngle = 0;
+            
+            //touch input stuff
+            var pressed = 10;
+            var touchup = 0;
+            var touchleft = 0;
+            var touchright = 0;
+            var touchdown = 0;
+
+            //touch input
+            function leftf(){
+                pressed = 15;
+                touchleft = 1;
+            }
+            function upf(){
+                pressed = 10;
+                touchup = 1;
+            }
+            function rightf(){
+                pressed = 15;
+                touchright = 1;
+            }
+            function downf(){
+                pressed = 10;
+                touchdown = 1;
+            }
+
+            function touch(){
+                if(pressed > 0){
+                    pressed--;
+                    if(touchleft)
+                        player.turnLeft();
+                    else if(touchup)
+                        player.increaseSpeed();
+                    else if(touchdown)
+                        player.decreaseSpeed();
+                    else if(touchright)
+                        player.turnRight();  
+                }
+                else{
+                    touchdown = 0;
+                    touchleft = 0;
+                    touchright = 0;
+                    touchup = 0;
+                }
+            }
+
+            //keyboard stuff
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                space: false
+            };
+
+            function keyboardStuff(){
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = true;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = true;
+                    }
+                    else if(event.keyCode == 17) {
+                        keys.ctrl = true;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = false;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = false;
+                    } 
+                    else if(event.keyCode == 17) {
+                        keys.ctrl = false;
+                    } 
+                });
+            }
+
+            //levels
+            level[0][0] =  [ 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8];
+            level[0][1] =  [ 8,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  8];
+            level[0][2] =  [ 8,  1,  1,  6,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  2,  7,  1,  8];
+            level[0][3] =  [ 8,  1,  1,  3,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  3,  1,  8];
+            level[0][4] =  [ 8,  1,  1,  4,  2,  2,  7,  1,  1,  8,  8,  8,  8,  8,  8,  8,  8,  1,  3,  1,  8];
+            level[0][5] =  [ 8,  1,  1,  1,  1,  1,  3,  1,  1,  8,  1,  1,  1,  1,  1,  1,  8,  1,  3,  1,  8];
+            level[0][6] =  [ 8,  8,  8,  8,  8,  1,  3,  1,  1,  8,  1,  1,  1,  1,  1,  1,  8,  1,  3,  1,  8];
+            level[0][7] =  [ 8,  1,  1,  1,  1,  1,  3,  1,  1,  8,  1,  1,  1,  1,  1,  1,  8,  1,  3,  1,  8];
+            level[0][8] =  [ 8,  1,  6,  2,  2,  2,  5,  1,  1,  8,  1,  6,  2,  7,  1,  1,  8,  1,  3,  1,  8];
+            level[0][9] =  [ 8,  1,  3,  1,  1,  1,  1,  1,  1,  1,  1,  3,  1,  3,  1,  1,  1,  1,  3,  1,  8];
+            level[0][10] = [ 8,  1,  4,  2,  2,  2,  2,  2,  2,  2,  2,  5,  1,  4,  2,  2,  2,  2,  5,  1,  8];
+            level[0][11] = [ 8,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  8];
+            level[0][12] = [ 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8];
+            level[0][13] = [ 8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8];
+
+            function redraw(){//place real blocks on the map, testing only around the map //place real blocks on the map, testing only around the map 
+            //grass == 1, leftright == 2, topbotom == 3, topright == 4 topleft == 5, bottomright == 6, bottomleft == 7, solid == 8
+                
+                for (var i = 0; i < 13; i++) { 
+                    for (var j = 0; j < 21; j++) {
+                        if(arrayOfScreen[i][j] == 0)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/blank.png");
+                        if(arrayOfScreen[i][j] == 1)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/grass.png");
+                        if(arrayOfScreen[i][j] == 2)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/street_small_leftright.png");
+                        if(arrayOfScreen[i][j] == 3)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/street_small_topbottom.png");
+                        if(arrayOfScreen[i][j] == 4)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/street_small_topright.png");
+                        if(arrayOfScreen[i][j] == 5)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/street_small_topleft.png");
+                        if(arrayOfScreen[i][j] == 6)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/street_small_bottomright.png");
+                        if(arrayOfScreen[i][j] == 7)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/street_small_bottomleft.png");
+                        if(arrayOfScreen[i][j] == 8)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","KartWar_assets/solid.png");
+                    } 
+                }
+            }
+            function initializeCanvas(){
+                //draw map for testing
+                gameCanvas = document.getElementById("gameScreen");
+                gameContext = gameCanvas.getContext("2d");
+                textureCanvas = document.getElementById("textureScreen");
+                textureContext = textureCanvas.getContext("2d");
+            }
+            function start(){// 0 up, 1 right, 2 down, 3 left,
+                initializeCanvas();
+                textureCanvas.style.display = "none";
+                if(debug == 1){
+                    document.getElementById("screen").style.backgroundColor = "black";
+                    var division = document.getElementById("screen");
+                    var i = 160;
+                    var j = 1;
+                    //place blank blocks on the map
+                    for (var i = 0; i < 13; i++) { 
+                        for (var j = 0; j < 21; j++) { 
+                            division.innerHTML += "<img src = KartWar_assets/blank.png id ='" + i +"y" + j + "x" + "' width = '75px'; height = '75px';>";
+                        } 
+                    }
+                }
+                //place real blocks on the map, testing only around the map //solid == 1, brick0 == 2, brick1 == 3, brick2 == 4 glass0 == 5, glass1 == 6, grass == 7, statue == 8, destroyed statue == 9
+                arrayOfScreen = level[0];
+                //draws the test map (with blocks)
+                if(debug == 1)
+                    redraw();
+                player = new Player(850, 200);
+                opponent = new Opponent(850, 150);
+                processRef = window.setInterval(process, 10);
+                
+                keyboardStuff();
+            }
+            function drawBackground(x, y, theta){
+                var x1 = -x * zoom + screenWidth / 2;
+                var y1 = -y * zoom + screenHeight / 2;
+                
+                //rotate the opponent to specifed angle by translating to origin and rotating back
+
+                textureContext.drawImage(map1, x1, y1, 1575 * zoom, 975 * zoom);
+                textureContext.drawImage(opponent1, x1 + opponentX * zoom, y1 + opponentY * zoom, screenWidth / 20, screenWidth / 20);
+                //translate the image to origin and rotate and then translate back
+                if(theta != currentAngle){
+                    textureContext.translate(screenWidth / 2, screenHeight / 2);
+                    textureContext.rotate((-theta + currentAngle) * Math.PI / 180);
+                    textureContext.translate(-screenWidth / 2, -screenHeight / 2);
+                    currentAngle = theta;
+                }
+            }
+            function drawOpponent(x, y, theta){
+                //draws the player on the map
+                document.getElementById("opponent1").style.left = x;
+                document.getElementById("opponent1").style.top = y;
+                document.getElementById("opponent1").style.transform = "rotate(" + theta + "deg)";
+            }
+            function drawPlayer(x, y, theta){
+                //draws the player on the map
+                document.getElementById("player1").style.left = x;
+                document.getElementById("player1").style.top = y;
+                document.getElementById("player1").style.transform = "rotate(" + theta + "deg)";
+                //display the current block
+                //console.log("xblock = " + Math.floor(x/75) + "yblock = " + Math.floor(y/75));
+            }
+            function drawGameScreen(speed, lap, checkPoint){
+                gameContext.drawImage(textureCanvas, 0 , 0);
+                gameContext.drawImage(player1, screenWidth / 2 - screenWidth / 40, screenHeight / 2 - screenWidth / 40, screenWidth / 20, screenWidth / 20);
+                gameContext.font = (screenWidth / 32) + "px Georgia"; 
+                gameContext.fillText("Lap (" + (lap + 1) + "/3) " + " CheckPoint (" + (checkPoint + 1) + "/4) " + Math.floor(speed * 30) + "kph", screenWidth - screenWidth / 2, screenHeight / 10);
+            }
+            //main process which runs every iteration
+            function process(){
+                if(keys.left)
+                    player.turnLeft();
+                else if(keys.right)
+                    player.turnRight();
+                else if(keys.up)
+                    player.increaseSpeed();
+                else if(keys.down)
+                    player.decreaseSpeed();
+                player.move();
+                opponent.move();
+                opponentAction();
+                touch();
+            }
+            function opponentAction(){
+                //increase speed for 10 iter
+                opponentTimer++;
+                if(opponentTimer < 50)
+                    opponent.increaseSpeed();
+                if(opponentTimer < 270 && opponentTimer > 180)
+                    opponent.turnRight();
+                if(opponentTimer < 500 && opponentTimer > 410)
+                    opponent.turnRight();
+                if(opponentTimer < 750 && opponentTimer > 500)
+                    opponent.increaseSpeed();
+                if(opponentTimer < 840 && opponentTimer > 750)
+                    opponent.turnRight();
+                if(opponentTimer < 1050 && opponentTimer > 850)
+                    opponent.increaseSpeed();
+                if(opponentTimer < 1080 && opponentTimer > 1000)
+                    opponent.turnRight();   
+                if(opponentTimer < 1140 && opponentTimer > 1130){
+                    opponent.increaseSpeed();
+                    opponent.positionY = 150;
+                    opponent.angle = 90;
+                }
+                if(opponentTimer > 1230){
+                    opponent.positionY = 150;
+                    opponent.positionX = 850;
+                    opponentTimer = 0;
+                    opponent.speed = 0;
+                    opponent.currentLap++;
+                }
+            }
+            //player class which contains all player funcs
+            class Player{
+                constructor(x, y){
+                    this.positionX = x;
+                    this.positionY = y;
+                    this.currentBlock = 0;
+                    this.angle = 90;
+                    this.collisionCheckDist = 4; //should be equal to wall thickness
+                    this.moveRadius = 3; //should be less than wall thickness and collisionCheckDist
+                    this.collisionCheck = new Array(4);
+                    this.collisionCheck[0] = 0; //up
+                    this.collisionCheck[1] = 0; //right
+                    this.collisionCheck[2] = 0; //down
+                    this.collisionCheck[3] = 0; //left
+                    this.acceleration = 0.05;
+                    this.deceleration = 0.05;
+                    this.changeSign = 0;
+                    this.changeSignDelay = 50;
+                    this.speed = 0;
+                    this.currentLap = 0;
+                    this.checkPoint = 0;
+                    this.maxSpeed = roadSpeed;
+                    this.maxReverseSpeed = -1;
+                    this.updatePosition();
+                }
+                checkPointCheckFunc(){
+                    //check point checking and win condition
+                    for(var i = 0; i < 4; i++){
+                        var distx = Math.abs(this.positionX - checkPointsX[i]);
+                        var disty = Math.abs(this.positionY - checkPointsY[i]);
+                        if(distx < 50 && disty < 50 && this.checkPoint == i){
+                            this.checkPoint = i + 1;
+                        }
+                    }
+                    if(this.checkPoint == 4){
+                        this.checkPoint = 0;
+                        this.currentLap++;
+                    }
+                    if(this.currentLap == 3){
+                        if(opponent.currentLap < 3)
+                            alert("Finished! You Won!");
+                        else
+                            alert("Finished! 2nd Place!");
+                        clearInterval(processRef);
+                    }
+
+                }
+                collisionCheckFunc(){
+                    //clear collison checks
+                    for(var i = 0; i < 4; i++)
+                        this.collisionCheck[i] = 0;
+                    var intX = this.positionX;
+                    var intY = this.positionY;
+                    for(var i = 0; i < Math.abs(this.speed) + 5; i++){
+                        //calculate the relevant blocks around player
+                        //if the outofbound block is encountered, activate collisioncheck
+                        if(intY + i < 1600){
+                            var plusIYBlock = this.calculateCurrentBlock(this.positionX, this.positionY + i)
+                            if(plusIYBlock == 8)
+                                this.collisionCheck[2] = 1;
+                        }
+                        if(intX + i < 1600){
+                            var plusIXBlock = this.calculateCurrentBlock(this.positionX + i, this.positionY)
+                            if(plusIXBlock == 8)
+                                this.collisionCheck[1] = 1;
+                        }
+                        if(intX - i >= 0){
+                            var minusIXBlock = this.calculateCurrentBlock(this.positionX - i, this.positionY)
+                            if(minusIXBlock == 8)
+                                this.collisionCheck[3] = 1;
+                        }
+                        if(intY - i >= 0){
+                            var minusIYBlock = this.calculateCurrentBlock(this.positionX, this.positionY - i)
+                            if(minusIYBlock == 8)
+                                this.collisionCheck[0] = 1;
+                        }
+                    }
+                }
+                calculateCurrentBlock(x, y){
+                    //returns the block corrosponding to position
+                    //console.log("block type = " + level[currentLevel][Math.floor(y/75)][Math.floor(x/75)]);
+                    return level[currentLevel][Math.floor(y/75)][Math.floor(x/75)];
+                }
+                roadTerrain(){
+                    //depending on the terrain limit the max speed
+                    if(this.currentBlock == 1){
+                        this.maxSpeed = grassSpeed;
+                    }
+                    else{
+                        this.maxSpeed = roadSpeed;
+                    }
+                    //if the current speed is more than maxspeed, truncate to max speed
+                    if(this.speed > this.maxSpeed)
+                        this.speed -= 0.05;
+                    //if the current speed is less than maxReverseSpeed, truncate to maxReverseSpeed
+                    if(this.speed < this.maxReverseSpeed)
+                        this.speed += 0.05;
+                }
+                move(){
+                    this.checkPointCheckFunc();
+                    this.roadTerrain();
+                    this.currentBlock = this.calculateCurrentBlock(this.positionX, this.positionY);
+                    this.collisionCheckFunc();
+                    //depending on the collision prevent the car from moving in that direction
+                    if(this.speed > 0){
+                        if(this.collisionCheck[1] == 0){
+                            if(this.angle >= 0 && this.angle < 180)
+                                this.positionX = this.positionX + this.speed * Math.sin(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[3] == 0){
+                            if(this.angle >= 180 && this.angle < 360)
+                                this.positionX = this.positionX + this.speed * Math.sin(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[0] == 0){
+                            if(this.angle >= 0 && this.angle < 90)
+                                this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[0] == 0){
+                            if(this.angle >= 270 && this.angle < 360)
+                                this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[2] == 0){
+                            if(this.angle >= 90 && this.angle < 270)
+                                this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                        }
+                    }
+                    else{
+                        if(this.collisionCheck[3] == 0){
+                            if(this.angle >= 0 && this.angle < 180)
+                                this.positionX = this.positionX + this.speed * Math.sin(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[1] == 0){
+                            if(this.angle >= 180 && this.angle < 360)
+                                this.positionX = this.positionX + this.speed * Math.sin(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[2] == 0){
+                            if(this.angle >= 0 && this.angle < 90)
+                                this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[2] == 0){
+                            if(this.angle >= 270 && this.angle < 360)
+                                this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                        }
+                        if(this.collisionCheck[0] == 0){
+                            if(this.angle >= 90 && this.angle < 270)
+                                this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                        }
+                    }
+                    this.updatePosition();
+                }
+                increaseSpeed(){
+                    var prevSpeed = this.speed;
+                    //check if the speed can be increased
+                    if(this.speed < this.maxSpeed)
+                        this.speed += this.acceleration;
+                    
+                    //change sign when speed changes from -ve to +ve
+                    if(prevSpeed < 0 && this.speed > 0){
+                        this.speed = 0;
+                        this.changeSign = this.changeSignDelay; //stop for defined iterations when car reached 0 speed
+                    }
+                    if(this.changeSign > 0){
+                        this.changeSign--;
+                        this.speed = 0;
+                    }
+                }
+                decreaseSpeed(){
+                    var prevSpeed = this.speed;
+                    //check if the speed can be decreased
+                    if(this.speed > this.maxReverseSpeed)
+                        this.speed -= this.deceleration;
+                    
+                    //change sign when speed changes from +ve to -ve
+                    if(prevSpeed > 0 && this.speed < 0){
+                        this.speed = 0;
+                        this.changeSign = this.changeSignDelay; //stop for defined iterations when car reached 0 speed
+                    }
+                    if(this.changeSign > 0){
+                        this.changeSign--;
+                        this.speed = 0;
+                    }
+                }
+                updatePosition(){
+                    //drawMap();
+                    //draw player on the map
+                    //drawPlayer(this.positionX, this.positionY, this.angle);
+                    drawBackground(this.positionX, this.positionY, this.angle);
+                    drawGameScreen(this.speed, this.currentLap, this.checkPoint);
+                    //check if colide with the opponent
+                    if(Math.abs(this.positionX - opponentX) < 15 && Math.abs(this.positionY - opponentY) <  15){
+                        alert("dead!")
+                        clearInterval(processRef);
+                    }
+                }
+                turnLeft(){
+                    this.angle--;
+                    if(this.angle < 0)
+                        this.angle = this.angle + 360;
+                    this.updatePosition();
+                }
+                turnRight(){
+                    this.angle++;
+                    this.angle = this.angle % 360;
+                    this.updatePosition();
+                }
+            }
+            //player class which contains all player funcs
+            class Opponent{
+                constructor(x, y){
+                    this.positionX = x;
+                    this.positionY = y;
+                    this.currentBlock = 0;
+                    this.angle = 90;
+                    this.collisionCheckDist = 4; //should be equal to wall thickness
+                    this.acceleration = 0.05;
+                    this.deceleration = 0.05;
+                    this.changeSign = 0;
+                    this.changeSignDelay = 50;
+                    this.speed = 0;
+                    this.currentLap = 0;
+                    this.checkPoint = 0;
+                    this.maxSpeed = roadSpeed;
+                    this.maxReverseSpeed = -1;
+                    this.updatePosition();
+                }
+                calculateCurrentBlock(x, y){
+                    //returns the block corrosponding to position
+                    //console.log("block type = " + level[currentLevel][Math.floor(y/75)][Math.floor(x/75)]);
+                    return level[currentLevel][Math.floor(y/75)][Math.floor(x/75)];
+                }
+                roadTerrain(){
+                    //depending on the terrain limit the max speed
+                    if(this.currentBlock == 1){
+                        this.maxSpeed = grassSpeed;
+                    }
+                    else{
+                        this.maxSpeed = roadSpeed;
+                    }
+                    //if the current speed is more than maxspeed, truncate to max speed
+                    if(this.speed > this.maxSpeed)
+                        this.speed -= 0.05;
+                    //if the current speed is less than maxReverseSpeed, truncate to maxReverseSpeed
+                    if(this.speed < this.maxReverseSpeed)
+                        this.speed += 0.05;
+                }
+                move(){
+                    this.roadTerrain();
+                    this.currentBlock = this.calculateCurrentBlock(this.positionX, this.positionY);
+                    this.positionX = this.positionX + this.speed * Math.sin(Math.PI * this.angle / 180);
+                    this.positionY = this.positionY - this.speed * Math.cos(Math.PI * this.angle / 180);
+                    this.updatePosition();
+                }
+                increaseSpeed(){
+                    var prevSpeed = this.speed;
+                    //check if the speed can be increased
+                    if(this.speed < this.maxSpeed)
+                        this.speed += this.acceleration;
+                    
+                    //change sign when speed changes from -ve to +ve
+                    if(prevSpeed < 0 && this.speed > 0){
+                        this.speed = 0;
+                        this.changeSign = this.changeSignDelay; //stop for defined iterations when car reached 0 speed
+                    }
+                    if(this.changeSign > 0){
+                        this.changeSign--;
+                        this.speed = 0;
+                    }
+                }
+                decreaseSpeed(){
+                    var prevSpeed = this.speed;
+                    //check if the speed can be decreased
+                    if(this.speed > this.maxReverseSpeed)
+                        this.speed -= this.deceleration;
+                    
+                    //change sign when speed changes from +ve to -ve
+                    if(prevSpeed > 0 && this.speed < 0){
+                        this.speed = 0;
+                        this.changeSign = this.changeSignDelay; //stop for defined iterations when car reached 0 speed
+                    }
+                    if(this.changeSign > 0){
+                        this.changeSign--;
+                        this.speed = 0;
+                    }
+                }
+                updatePosition(){
+                    //drawMap();
+                    //draw player on the map
+                    //drawOpponent(this.positionX, this.positionY, this.angle);
+                    opponentX = this.positionX;
+                    opponentY = this.positionY;
+                }
+                turnLeft(){
+                    this.angle--;
+                    if(this.angle < 0)
+                        this.angle = this.angle + 360;
+                    this.updatePosition();
+                }
+                turnRight(){
+                    this.angle++;
+                    this.angle = this.angle % 360;
+                    this.updatePosition();
+                }
+            }
+            window.addEventListener("load", start, false);   
+        </script>
+    </head>
+    <body>
+        <canvas id = "gameScreen" width = "1440" height = "960" style = "border:1px solid #000000;"></canvas>
+        <canvas id = "textureScreen" width = "1440" height = "960" style = "border:1px solid #000000;"></canvas>
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="leftf();">
+                        </th>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="upf();">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="rightf();"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>HighScores</h1></div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_down.png width = "250px" height = "125px" onclick ="downf();">
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            <img src = "KartWar_assets/level1_colored.png" id = "map1" width = "20px" height = "20px" style = "position : absolute; z-index: -1;">
+            <img src = "KartWar_assets/player.png" id = "player1" width = "20px" height = "20px" style = "position : absolute; z-index: 0;">
+            <img src = "KartWar_assets/opponent.png" id = "opponent1" width = "20px" height = "20px" style = "position : absolute; z-index: 0;">
+        </div>
+    </body>
+</html>

@@ -1,0 +1,415 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=1575px, user-scalable=no" />
+        <style>
+
+        </style>
+        <script>
+            var left = 0;
+            var right = 0;
+            var up = 0;
+            var down = 0;
+            var color = 0;
+            var player;
+            var processRef;
+            var canvasRef;
+            var arrayOfScreen = new Array(14);
+            var level = new Array(14);
+            var playerBlockX;
+            var playerBlockY;
+            var arrayOfCanvas = new Array(360);
+            var c;
+            var ctx;
+            var pressed = 30;
+            var touchup = 0;
+            var touchleft = 0;
+            var touchright = 0;
+
+
+            //levels
+            level[0] =  [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[1] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[2] =  [ 1,  1,  1,  1,  0,  1,  1,  1,  1,  0,  1,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1];
+            level[3] =  [ 1,  0,  0,  0,  0,  1,  0,  0,  1,  0,  1,  0,  0,  0,  0,  0,  0,  1,  1,  0,  1];
+            level[4] =  [ 1,  1,  1,  1,  1,  1,  0,  0,  1,  1,  1,  0,  1,  1,  1,  1,  0,  1,  1,  0,  1];
+            level[5] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  0,  1];
+            level[6] =  [ 1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1];
+            level[7] =  [ 1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1];
+            level[8] =  [ 1,  0,  1,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  1];
+            level[9] =  [ 1,  0,  1,  1,  1,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  1];
+            level[10] = [ 1,  0,  0,  0,  0,  0,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  0,  1,  1];
+            level[11] = [ 1,  0,  1,  0,  0,  1,  0,  1,  0,  0,  0,  1,  0,  0,  0,  1,  0,  1,  0,  2,  1];
+            level[12] = [ 1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1];
+            level[13] = [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0];
+
+            function draw(){//place real blocks on the map, testing only around the map //place real blocks on the map, testing only around the map 
+            //solid == 1, brick0 == 2, brick1 == 3, brick2 == 4 glass0 == 5, glass1 == 6, grass == 7, statue == 8  
+                /*for (var i = 0; i < 13; i++) { 
+                    for (var j = 0; j < 21; j++) {
+                        if(arrayOfScreen[i][j] == 0)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","MazeWar2D_assets/blank.png");
+                        if(arrayOfScreen[i][j] == 1)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","MazeWar2D_assets/solid.png");
+                            if(arrayOfScreen[i][j] == 2)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","MazeWar2D_assets/cheese.png");
+                    } 
+                }*/
+            }
+            //drawing stuff
+            function drawCanvas(){
+                var mouse = document.getElementById("mouse");
+                // Create gradient
+                var grd = ctx.createLinearGradient(0, 0, 0, 960);
+                grd.addColorStop(0, "grey");
+                grd.addColorStop(1, "white");
+
+                // Fill with gradient
+                ctx.fillStyle = grd;
+                ctx.fillRect(0, 0, 1440, 960);
+                ctx.fillStyle = "brown";
+                for(var i = 0; i < 180; i ++){
+                    for(var j = 0; j < 120; j ++){
+                        if(arrayOfCanvas[i][j] == 1){
+                            ctx.fillRect( i * 8, j * 8, 8, 8 );
+                        }
+                        else if(arrayOfCanvas[i][j] == 2){
+                            ctx.fillStyle = "yellow";
+                            ctx.fillRect( i * 8, j * 8, 8, 8 );
+                            ctx.fillStyle = "brown";
+                        }  
+                    }  
+                }
+                ctx.drawImage(mouse, 320 * 2, 430 * 2);
+            }
+            function calculateCanvas(){ //calculate shit
+                var tempBlockY;
+                var tempBlockX;
+                var tempX;
+                var tempY;
+                var radius = 2;
+                //calculate left side of player
+                for(var i = 0; i < 90; i++){ 
+                    for(var j = 0; j < 120; j++){
+                        //rsintheta
+                        tempX = i * radius * Math.cos(player.angle * Math.PI / 180);
+                        tempY = i * radius * Math.sin(player.angle * Math.PI / 180);
+                        //rcostheta
+                        tempX += -j * radius * Math.sin(player.angle * Math.PI / 180);
+                        tempY += j * radius * Math.cos(player.angle * Math.PI / 180);
+                        //tempBlockX = Math.floor((player.Xposition - (i * radius * Math.sin(player.angle) * Math.cos(player.angle))) / 75);  
+                        //tempBlockY = Math.floor((player.Yposition - (j * radius * Math.sin(player.angle)  * Math.sin(player.angle))) / 75);
+                        tempBlockX = Math.floor((player.Xposition - tempX) / 75);  
+                        tempBlockY = Math.floor((player.Yposition - tempY) / 75);
+                        if(tempBlockX < 0)
+                            arrayOfCanvas[90 - i][120 - j] = 0;
+                        else if(tempBlockY < 0)
+                            arrayOfCanvas[90 - i][120 - j] = 0;
+                        else if(tempBlockX > 20)
+                            arrayOfCanvas[90 - i][120 - j] = 0;
+                        else if(tempBlockY > 12)
+                            arrayOfCanvas[90 - i][120 - j] = 0;
+                        else if(arrayOfScreen[tempBlockY][tempBlockX] == 1)
+                            arrayOfCanvas[90 - i][120 - j] = 1;
+                        else if(arrayOfScreen[tempBlockY][tempBlockX] == 2)
+                            arrayOfCanvas[90 - i][120 - j] = 2;
+                    }   
+                }
+                //calculate right side of player
+                for(var i = 0; i < 90; i++){ 
+                    for(var j = 0; j < 120; j++){
+                        //rsintheta
+                        tempX = -i * radius * Math.cos(player.angle * Math.PI / 180);
+                        tempY = -i * radius * Math.sin(player.angle * Math.PI / 180);
+                        //rcostheta
+                        tempX += -j * radius * Math.sin(player.angle * Math.PI / 180);
+                        tempY += j * radius * Math.cos(player.angle * Math.PI / 180);
+                        //tempBlockX = Math.floor((player.Xposition - (i * radius * Math.sin(player.angle) * Math.cos(player.angle))) / 75);  
+                        //tempBlockY = Math.floor((player.Yposition - (j * radius * Math.sin(player.angle)  * Math.sin(player.angle))) / 75);
+                        tempBlockX = Math.floor((player.Xposition - tempX) / 75);  
+                        tempBlockY = Math.floor((player.Yposition - tempY) / 75);
+                        if(tempBlockX < 0)
+                            arrayOfCanvas[90 + i][120 - j] = 0;
+                        else if(tempBlockY < 0)
+                            arrayOfCanvas[90 + i][120 - j] = 0;
+                        else if(tempBlockX > 20)
+                            arrayOfCanvas[90 + i][120 - j] = 0;
+                        else if(tempBlockY > 12)
+                            arrayOfCanvas[90 + i][120 - j] = 0;
+                        else if(arrayOfScreen[tempBlockY][tempBlockX] == 1)
+                            arrayOfCanvas[90 + i][120 - j] = 1;
+                        else if(arrayOfScreen[tempBlockY][tempBlockX] == 2)
+                            arrayOfCanvas[90 + i][120 - j] = 2;
+                    }   
+                }
+
+            }
+            function clearCanvas(){
+                for(var i = 0; i < 180; i ++){
+                    for(var j = 0; j < 120; j ++){
+                        arrayOfCanvas[i][j] = 0;
+                    }         
+                }
+            }
+            function start(){// 0 up, 1 right, 2 down, 3 left,
+                player = new Player(1);
+                keyboardStuff();
+                c = document.getElementById("gameScreen");
+                ctx = c.getContext("2d");
+                //document.getElementById("screen").style.backgroundColor = "black";
+                //var division = document.getElementById("screen");
+                var i = 160;
+                var j = 1;
+                //place blank blocks on the map for testing only (!!!!)
+                for (var i = 0; i < 13; i++) { 
+                    for (var j = 0; j < 21; j++) { 
+                        //division.innerHTML += "<img src = MazeWar2D_assets/blank.png id ='" + i +"y" + j + "x" + "' width = '75px'; height = '75px';>";
+                    } 
+                }
+                for(var i = 0; i < 180; i++){
+                    arrayOfCanvas[i] = new Array(240);
+                    for(var j = 0; j < 120; j++)
+                        arrayOfCanvas[i][j] = 0;
+                }
+                arrayOfScreen = level;
+                draw();
+                processRef = window.setInterval(process, 5);
+                canvasRef = window.setInterval(canvas, 50);
+            }
+            function canvas(){
+                calculateCanvas();
+                drawCanvas();
+                clearCanvas();
+            }
+            function process(){
+                touch();
+                collisionCheck();
+                if(keys.left)
+                    player.turnLeft();
+                else if(keys.right)
+                    player.turnRight();
+                else if(keys.up)
+                    player.moveForward();
+                console.log(player.collisionCheck[1] + "block << "+ player.Xposition + "X position << " + player.Yposition + "Y position <<");
+            }
+            function collisionCheck(){
+                //calculate the positions of surrounding 4 blocks
+                playerBlockX = Math.floor(player.Xposition / 75);
+                playerBlockY = Math.floor(player.Yposition / 75);
+                if(arrayOfScreen[playerBlockY][playerBlockX] == 2){
+                    alert("Found the cheese, /./");
+                    clearInterval(processRef);
+                    clearInterval(canvasRef);
+                }
+                //check up
+                var tempBlockY = Math.floor((player.Yposition - 1) / 75);
+                var tempBlockX = Math.floor((player.Xposition) / 75);
+                if(arrayOfScreen[tempBlockY][tempBlockX] == 1){
+                    player.collisionCheck[0] = 1;
+                }
+                else{
+                    player.collisionCheck[0] = 0;
+                }
+                //check right
+                tempBlockY = Math.floor((player.Yposition) / 75);
+                tempBlockX = Math.floor((player.Xposition + 1) / 75);
+                if(arrayOfScreen[tempBlockY][tempBlockX] == 1){
+                    player.collisionCheck[1] = 1;
+                }
+                else{
+                    player.collisionCheck[1] = 0;
+                }
+                //check down
+                tempBlockY = Math.floor((player.Yposition + 1) / 75);
+                tempBlockX = Math.floor((player.Xposition) / 75);
+                if(arrayOfScreen[tempBlockY][tempBlockX] == 1){
+                    player.collisionCheck[2] = 1;
+                }
+                else{
+                    player.collisionCheck[2] = 0;
+                }
+                //check left
+                tempBlockY = Math.floor((player.Yposition) / 75);
+                tempBlockX = Math.floor((player.Xposition - 1) / 75);
+                if(arrayOfScreen[tempBlockY][tempBlockX] == 1){
+                    player.collisionCheck[3] = 1;
+                }
+                else{
+                    player.collisionCheck[3] = 0;
+                }
+                /*if(arrayOfScreen[playerBlockY][playerBlockX] == 1){
+                    player.reverse();
+                }*/
+            }
+            //keyboard input
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                space: false
+            };
+
+            function keyboardStuff(){
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = true;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = true;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = false;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = false;
+                    }   
+                });
+            }
+            //touch input
+            function leftf(){
+                pressed = 30;
+                touchleft = 1;
+            }
+            function upf(){
+                pressed = 30;
+                touchup = 1;
+            }
+            function rightf(){
+                pressed = 30;
+                touchright = 1;
+            }
+            function touch(){
+                if(pressed > 0){
+                    pressed--;
+                    if(touchleft)
+                        player.turnLeft();
+                    if(touchup)
+                        player.moveForward();
+                    if(touchright)
+                        player.turnRight();  
+                }
+                else{
+                    touchleft = 0;
+                    touchright = 0;
+                    touchup = 0;
+                }
+            }
+            class Player{ //ball??
+                constructor(type){
+                    this.Xposition = 100;
+                    this.Yposition = 100;
+                    this.lastX = 0;
+                    this.lastY = 0;
+                    this.angle = 0;
+                    this.direction = 0; //up = 0, right = 1, down = 2, left = 3
+                    this.collisionCheck = new Array(4);
+                    this.collisionCheck[0] = 0;
+                    this.collisionCheck[1] = 0;
+                    this.collisionCheck[2] = 0;
+                    this.collisionCheck[3] = 0;
+                    this.updatePosition();
+                }
+                updatePosition(){
+                    //document.getElementById("player").style.top = this.Yposition;
+                    //document.getElementById("player").style.left = this.Xposition;
+                    //document.getElementById("player").style.transform = "rotate(" + this.angle + "deg)";
+                }
+                reverse(){
+                    this.Xposition = this.Xposition - this.lastX;
+                    this.Yposition = this.Yposition + this.lastY;
+                    this.updatePosition();
+                }
+                moveForward(){
+                    var radius = 1;
+                    if(this.collisionCheck[1] == 0){
+                        if(this.angle >= 0 && this.angle < 180)
+                            this.Xposition = this.Xposition + radius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[3] == 0){
+                        if(this.angle >= 180 && this.angle < 360)
+                            this.Xposition = this.Xposition + radius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 0 && this.angle < 90)
+                            this.Yposition = this.Yposition - radius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 270 && this.angle < 360)
+                            this.Yposition = this.Yposition - radius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 90 && this.angle < 270)
+                            this.Yposition = this.Yposition - radius * Math.cos(Math.PI * this.angle / 180);
+                        
+                    }
+                    this.lastX = radius * Math.sin(Math.PI * this.angle / 180);
+                    this.lastY = radius * Math.cos(Math.PI * this.angle / 180);
+                    this.updatePosition();
+                }
+                turnLeft(){
+                    this.angle--;
+                    if(this.angle < 0)
+                        this.angle = this.angle + 360;
+                    this.updatePosition();
+                }
+                turnRight(){
+                    this.angle++;
+                    this.angle = this.angle % 360;
+                    this.updatePosition();
+                }
+            };
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+        <canvas id="gameScreen" width="1440" height="960" style="border:1px solid #000000;">
+        </canvas>
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="leftf();">
+                        </th>
+                        <th rowspan = "2" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="upf();">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="rightf();"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Game for testing, WIP</h1></div>
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            <img src = "MazeWar2D_assets/solid.png" width = "10px" height = "10px">
+            <img src = "MazeWar2D_assets/nothing.png" width = "10px" height = "10px">
+            <img id = "mouse" width = "10" height = "10" src="MazeWar2D_assets/mouse.png">
+        </div>
+    </body>
+</html>

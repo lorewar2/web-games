@@ -1,0 +1,280 @@
+<html>
+    <head>
+        <style>
+
+            #background {
+                position: absolute;
+                left: 0px;
+                top: 0px;
+                z-index: -1;
+            }
+            #foreground {
+                position: absolute;
+                left: 1500px;
+                top: 0px;
+                z-index: 2;
+            }
+            #player {
+                position: absolute;
+                left: 50px;
+                top: 0px;
+                z-index: 0;
+            }
+            #obstacle1 {
+                position: absolute;
+                left: 1500px;
+                top: 0px;
+                z-index: 1;
+            }
+            #obstacle2 {
+                position: absolute;
+                left: 1500px;
+                top: 0px;
+                z-index: 1;
+            }
+            #obstacle3 {
+                position: absolute;
+                left: 1500px;
+                top: 0px;
+                z-index: 1;
+            }
+
+        </style>
+        <script>
+            var y = 150;
+            var startObs1 = 1;
+            var startObs2 = 0;
+            var contObs2 = 1;
+            var obstacle1X = 1500;
+            var obstacle2X = 1500;
+            var type1 = -1;
+            var type2 = -1;
+            var up = 0;
+            var speed = 0;
+            var accer = 20;
+            var time = 0;
+            var risingTimer = 7;
+            var timerRef;
+            var risingRef;
+            var obstacleRef;
+            var animationRef;
+            var playerAngle = 0;
+            var lose = 0;
+            var score = 0;
+            document.addEventListener('keydown', function(event) {
+            if(event.keyCode == 38) {
+                up = 1;
+            }
+
+            });
+            function start(){ 
+                timerRef = window.setInterval(timer, 10);
+                obstacleRef = window.setInterval(obstacle, 10);
+                animationRef = window.setInterval(animation, 10);
+                showScores();
+            }
+            function sendResult(){
+                var comment = document.getElementById("comment").value;
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        alert(comment + ", your result sent succesfully");
+                        window.location.reload(false); 
+                    }
+                };
+                xmlhttp.open("GET","FlappyWar_assets/saveResultsFlappy.php?q=" + comment + "&r=" + score , true);
+                xmlhttp.send();
+		    }
+            function showScores() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("highscores").innerHTML = this.responseText;
+                    }
+                };
+                xmlhttp.open("GET","FlappyWar_assets/getResultsFlappy.php",true);
+                xmlhttp.send();
+		    }
+            function animation(){
+                //console.log("obs1 = " + obstacle1X + " obs2 = " + obstacle2X + " ty1 = " + type1 + " ty2 = " + type2);
+                if(type1 != -1)
+                    document.getElementById("obstacle" + type1).style.left = obstacle1X;
+                if(type2 != -1)
+                    document.getElementById("obstacle" + type2).style.left = obstacle2X;
+                if(lose){
+                    clearInterval(timerRef);
+                    clearInterval(obstacleRef);
+                    clearInterval(animationRef);
+                    clearInterval(risingRef);
+                    alert("You Lose," + " Your Score: " + score);
+                    var scoreDisplay = document.getElementById("score");
+                    scoreDisplay.innerHTML = "<h1>Your score is :" + score + "</h1>";
+                    if(score > 0){
+                        scoreDisplay.innerHTML += "Enter you name: <input type = 'text' id = 'comment'  placeholder = 'Name' style='width: 300px; height: 50px;'> ";
+                        scoreDisplay.innerHTML += "<input type = 'submit' onclick = 'sendResult()'>";
+                    }
+                    else{
+                        scoreDisplay.innerHTML += "<h1>Try again</h1>";
+                    }    
+                }
+                if(y > 840)
+                    lose = 1;
+                if((obstacle1X < 130) && (obstacle1X > -40)){
+                    if(type1 == 1){
+                        if(y < 40)
+                            lose =  1;
+                        if(y > 220)
+                            lose =  1;
+                    }
+                    if(type1 == 2){
+                        if(y < 370)
+                            lose =  1;
+                        if(y > 550)
+                            lose =  1;
+                    }
+                    if(type1 == 3){
+                        if(y < 500)
+                            lose =  1;
+                        if(y > 680)
+                            lose =  1;
+                    }
+                }
+                if((obstacle2X < 130) && (obstacle2X > -40)){
+                    if(type2 == 1){
+                        if(y < 40)
+                            lose =  1;
+                        if(y > 220)
+                            lose =  1;
+                    }
+                    if(type2 == 2){
+                        if(y < 370)
+                            lose =  1;
+                        if(y > 550)
+                            lose =  1;
+                    }
+                    if(type2 == 3){
+                        if(y < 500)
+                            lose =  1;
+                        if(y > 680)
+                            lose =  1;
+                    }
+                }
+            }
+            function obstacle(){
+                var scoreDisplay = document.getElementById("score");
+                
+                if(startObs1 == 1){
+                    type1 = Math.floor( 1 + Math.random() * 3);
+                    while(type1 == type2)
+                       type1 = Math.floor( 1 + Math.random() * 3);
+                    startObs1 = 0;
+                }
+                else{
+                    if(obstacle1X < -200){
+                    obstacle1X = 1500;
+                    startObs1 = 1;
+                    contObs2 = 1;
+                    score++;
+                    scoreDisplay.innerHTML = "<h1> Score: " + score + "</h1>";
+                }
+                    else{
+                        obstacle1X -= 4;
+                        if((obstacle1X < 750) && (contObs2)){
+                            startObs2 = 1;
+                            contObs2 = 0;
+                        }
+                    }
+                }
+                if(startObs2 == 1){
+                    startObs2 = 0;
+                    type2 = Math.floor( 1 + Math.random() * 3);
+                    while(type1 == type2)
+                        type2 = Math.floor( 1 + Math.random() * 3);
+                }
+                else{
+                    if(obstacle2X < -200){
+                        obstacle2X = 1500;
+                        score++;
+                        scoreDisplay.innerHTML = "<h1> Score: " + score + "</h1>";
+                    }
+                    else if(type2 != -1){
+                        obstacle2X -= 4;
+                    }   
+                }
+            }
+
+            function timer(){
+                if(up == 1){
+                    clearInterval(timerRef);
+                    risingRef = window.setInterval(rising, 5);
+                    up = 0;
+                }
+                time += 0.01;
+                y += speed * time + (0.5) * accer * time * time;
+                
+                if(playerAngle < 70)
+                    playerAngle += 1;
+                document.getElementById("player").style.top = y;
+                document.getElementById("player").style.transform = "rotate(" + playerAngle + "deg)";
+            }
+
+            function rising(){
+                time = 0;
+                speed = 0;
+                if(risingTimer > 0){
+                    if(y > 0){
+                        y -= 4;
+                        if(playerAngle > -50)
+                            playerAngle -= 2;
+                    }
+                    risingTimer--;
+                }
+                else{
+                    risingTimer = 30;
+                    clearInterval(risingRef);
+                    timerRef = window.setInterval(timer, 10);
+                }
+                document.getElementById("player").style.top = y;
+                document.getElementById("player").style.transform = "rotate(" + playerAngle + "deg)";
+            }
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+        <div id = "screen" style = "width: 1600px; height: 1000px;">
+            <img id = "background" src = "FlappyWar_assets/background.jpg" width = "1600px" height = "1000px">
+            <img id = "player" src = "FlappyWar_assets/bird.png" width = "135px" height = "135px">
+            <img id = "obstacle1" src = "FlappyWar_assets/obstacle1.png" width = "250px" height = "920px">
+            <img id = "obstacle2" src = "FlappyWar_assets/obstacle2.png" width = "250px" height = "920px">
+            <img id = "obstacle3" src = "FlappyWar_assets/obstacle3.png" width = "250px" height = "920px">
+            <img id = "foreground" src = "FlappyWar_assets/blank.jpg" width = "250px" height = "1000px">
+        </div>
+        <div id = "controls" style = "width: 90%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="up = 1;">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>HighScores</h1></div>
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>

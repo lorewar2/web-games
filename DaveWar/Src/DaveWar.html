@@ -1,0 +1,375 @@
+<html>
+    <head>
+        <style>
+            body{
+                overflow: hidden;
+            }
+        </style>
+        <script>
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+            var arrayOfScreen = new Array(10);
+            var processRef;
+            var animationRef;
+            var player;
+            var left = 0;
+            var right = 0;
+            var up = 0;
+            var moving;
+            var movingAni = 5;
+            var falling = 1;
+            var floating = 0;
+            var jumping = 0;
+            var onGround = 1;
+            var score = 0;
+            var gotkey = 0;
+            var lose = 0;
+            var win = 0;
+            
+            function redraw(){//place real blocks on the map, testing only around the map //brick == 1, glass == 2, sand == 3, fire == 4 pipe == 5, key == 6, door == 7, diamond == 8 
+                var scoreDisplay = document.getElementById("score");
+                for (var i = 0; i < 10; i++) { 
+                    for (var j = 0; j < 16; j++) {
+                        if(arrayOfScreen[i][j] == 0)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/blank.jpg");
+                        if(arrayOfScreen[i][j] == 1)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/brick.jpg");
+                        if(arrayOfScreen[i][j] == 2)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/glass.png");
+                        if(arrayOfScreen[i][j] == 3)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/sand.png");
+                        if(arrayOfScreen[i][j] == 4)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/fire.png");
+                        if(arrayOfScreen[i][j] == 5)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/pipe.png");
+                        if(arrayOfScreen[i][j] == 6)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/key.png");
+                        if(arrayOfScreen[i][j] == 7)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/door.png");
+                        if(arrayOfScreen[i][j] == 8)
+                            document.getElementById(i +"y" + j + "x").setAttribute("src","DaveWar_assets/diamond.png"); 
+                    } 
+                }
+                scoreDisplay.innerHTML = "<h1> Score: " + score + "</h1>"; 
+            }
+            function start(){
+                document.addEventListener('keydown', function(event) {
+                    
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                        left = 1;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+                        right = 1;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                        up = 1;
+                    }
+                    else if(event.keyCode == 40) {
+                    }   
+                });
+                document.addEventListener('keyup', function(event) {
+                    
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                        left = 0;
+                        moving = 0;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                        right = 0;
+                        moving = 0;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                        up = 0;
+                    }
+                    else if(event.keyCode == 40) {
+                    }   
+                });
+                
+
+                document.getElementById("screen").style.backgroundColor = "black";
+                var division = document.getElementById("screen");
+                var i = 160;
+                var j = 1;
+                //place blank blocks on the map
+                for (var i = 0; i < 10; i++) { 
+                    for (var j = 0; j < 16; j++) { 
+                        division.innerHTML += "<img src = DaveWar_assets/blank.jpg id ='" + i +"y" + j + "x" + "' width = '100px'; height = '100px'; style = ' z-index: -1;'>";
+                    } 
+                }
+                
+                //place real blocks on the map, testing only around the map //brick == 1, glass == 2, sand == 3, fire == 4 pipe == 5, key == 6, door == 7, diamond == 8 
+                arrayOfScreen[0] = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+                arrayOfScreen[1] = [1, 8, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1];
+                arrayOfScreen[2] = [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1];
+                arrayOfScreen[3] = [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+                arrayOfScreen[4] = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+                arrayOfScreen[5] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+                arrayOfScreen[6] = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2];
+                arrayOfScreen[7] = [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
+                arrayOfScreen[8] = [1, 5, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 7, 2];
+                arrayOfScreen[9] = [3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 3, 3, 3, 3, 3, 1];
+                redraw();
+                
+                player = new Player(0);
+                processRef = window.setInterval(process, 10);
+                animationRef = window.setInterval(animation, 20);
+            }
+            function process(){
+                if(left == 1){
+                    player.moveLeft();
+                    moving = 1;
+                }
+                if(right == 1){
+                    player.moveRight();
+                    moving = 1;
+                }
+                if((up == 1) && (onGround == 1)){
+                    jumping = 40;
+                    up = 0;
+                    onGround = 0;
+                }
+                player.jump();
+                player.fall();
+                if(lose == 1){
+                    alert("you lose");
+                    clearInterval(processRef);
+                    clearInterval(animationRef);
+                    document.getElementById("player").setAttribute("src","DaveWar_assets/player_Dead.png");
+                }
+                if(win){
+                    alert("you win");
+                    clearInterval(processRef);
+                    clearInterval(animationRef);
+                    document.getElementById("player").setAttribute("src","DaveWar_assets/player_Dead.png");
+                }
+            }
+            function animation(){
+                if(moving){
+                    if(movingAni == 5){
+                    document.getElementById("player").setAttribute("src","DaveWar_assets/player_Running0.png");
+                    movingAni--;
+                    }
+                    else if(movingAni == 4){
+                        document.getElementById("player").setAttribute("src","DaveWar_assets/player_Running1.png");
+                        movingAni--;
+                    }
+                    else if(movingAni == 3){
+                        document.getElementById("player").setAttribute("src","DaveWar_assets/player_Running2.png");
+                        movingAni--;
+                    }
+                    else if(movingAni == 2){
+                        document.getElementById("player").setAttribute("src","DaveWar_assets/player_Running1.png");
+                        movingAni--;
+                    }
+                    else if(movingAni == 1){
+                        document.getElementById("player").setAttribute("src","DaveWar_assets/player_Running0.png");
+                        movingAni--;
+                    }
+                    else{
+                        movingAni = 5;
+                    }
+                }
+            }
+            class Player{
+                constructor(type){
+                    this.direction = 0;
+
+                    this.positionBlockX = 2;
+                    this.positionBlockY = 8;
+                    this.positionWithInBlockX = 0;
+                    this.positionWithInBlockY = 0;
+                    this.positionAbsoluteX = (this.positionBlockX * 100) + this.positionWithInBlockX;
+                    this.positionAbsoluteY = (this.positionBlockY * 100) + this.positionWithInBlockY;
+                    document.getElementById("player").style.top = this.positionAbsoluteY;
+                    document.getElementById("player").style.left = this.positionAbsoluteX;
+                }
+                updatePosition(){
+                    this.positionAbsoluteX = (this.positionBlockX * 100) + this.positionWithInBlockX;
+                    this.positionAbsoluteY = (this.positionBlockY * 100) + this.positionWithInBlockY;
+                    if(this.direction == 1){
+                        document.getElementById("player").style.transform = "scaleX(-1)";
+                    }
+                    else{
+                        document.getElementById("player").style.transform = "scaleX(1)";
+  
+                    }
+                    document.getElementById("player").style.top = this.positionAbsoluteY;
+                    document.getElementById("player").style.left = this.positionAbsoluteX;
+                }
+                moveLeft(){//brick == 1, glass == 2, sand == 3, fire == 4 pipe == 5, key == 6, door == 7, diamond == 8 
+                    this.direction = 1;
+                    if(this.positionWithInBlockX > -30){
+                        if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] != 0) && (this.positionWithInBlockY > 0)){
+                            
+                        }
+                        else{
+                            this.positionWithInBlockX -= 3;
+                        }
+                    }
+                    else{
+                        if((arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] == 7)){
+                            if(gotkey){
+                                win = 1;
+                            }
+                                
+                        }
+                        if(arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] == 6){
+                            arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] = 0;
+                            redraw();
+                            gotkey = 1;
+                        }
+                        if(arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] == 8){
+                            arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] = 0;
+                            score++;
+                            redraw();
+                        }
+                        if(arrayOfScreen[this.positionBlockY][this.positionBlockX - 1] == 0){
+                            this.positionWithInBlockX += 100;
+                            this.positionBlockX --;
+                            this.positionWithInBlockX -= 3;
+                        }       
+                    }
+                    this.updatePosition();
+                }
+                moveRight(){//brick == 1, glass == 2, sand == 3, fire == 4 pipe == 5, key == 6, door == 7, diamond == 8 
+                    this.direction = 0;
+                    if(this.positionWithInBlockX < 45){
+                        if((arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] != 0) && (this.positionWithInBlockY > 0)){
+                            
+                        }
+                        else{
+                            this.positionWithInBlockX += 3;
+                        }
+                    }
+                    else{
+                        if((arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] == 7)){
+                            if(gotkey){
+                                win = 1;
+                            }
+                        }
+                        if((arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] == 6)){
+                            (arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] == 0);
+                            redraw();
+                        }
+                        if((arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] == 8)){
+                            arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] = 0;
+                            score++;
+                            redraw();
+                        }
+                        if((arrayOfScreen[this.positionBlockY][this.positionBlockX + 1] == 0)){
+                            this.positionWithInBlockX -= 100;
+                            this.positionBlockX ++;
+                            this.positionWithInBlockX += 3;
+                        }
+                            
+                    }
+                    this.updatePosition();
+                }
+                jump(){
+                    if(jumping > 0){
+                        falling = 0;
+                        floating = 8;
+                        if(this.positionWithInBlockY > -20){
+                            this.positionWithInBlockY -= 5;
+                        }
+                        else{
+                            if(arrayOfScreen[this.positionBlockY - 1][this.positionBlockX] == 0){
+                                this.positionWithInBlockY += 100;
+                                this.positionBlockY --;
+                                this.positionWithInBlockY -= 5;
+                            }
+                        } 
+                        this.updatePosition();
+                        jumping--;
+                    }
+                }
+                fall(){//brick == 1, glass == 2, sand == 3, fire == 4 pipe == 5, key == 6, door == 7, diamond == 8 
+                    if(floating > 0){
+                        floating--;
+                    }
+                    else{
+                        falling = 1;
+                    }
+                    if(falling == 1){
+                        if(this.positionWithInBlockY < 0){
+                            this.positionWithInBlockY += 5;
+                        }
+                        else{
+                            if(arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] == 4){
+                                lose = 1;
+                            }
+                            if(arrayOfScreen[this.positionBlockY + 1][this.positionBlockX] == 0){
+                                this.positionWithInBlockY -= 100;
+                                this.positionBlockY ++;
+                                this.positionWithInBlockY += 5;
+                            }
+                            else{
+                                onGround = 1;
+                            }
+                        }
+                    }
+                    else{
+
+                    }
+                    this.updatePosition();
+                }
+            }
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+        <div id = "screen" style = " width: 1600px; height: 1000px;">
+            <img src = "DaveWar_assets/player_Standing.png" id = "player" width = "100px" height = "100px" style = "position : absolute; z-index: 0;">
+        </div>
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="left = 1;">
+                        </th>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="up = 1;">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="right = 1;"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>Work in progress, use keyboard</h1></div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_down.png width = "250px" height = "125px" onclick ="direction = 2;">
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            <img src = DaveWar_assets/player_Running1.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/player_Running2.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/player_Running0.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/brick.jpg width = "20px" height = "20px">
+            <img src = DaveWar_assets/key.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/fire.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/diamond.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/door.png width = "20px" height = "20px">
+            <img src = DaveWar_assets/pipe.png width = "20px" height = "20px">
+
+        </div>
+    </body>
+</html>

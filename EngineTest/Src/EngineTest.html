@@ -1,0 +1,652 @@
+<html>
+    <head>
+        <meta name = "viewport" content = "width = 1600px, user-scalable = no" />
+        <style>
+            
+        </style>
+        <script>
+            //this shit is oo boring make something else
+            //todo: cone of vision, display function, door opening, elevators, enemies, items, animations(gun, dying)
+            //last update: 2020.10.07
+            //variable definition
+            
+            //debug stuff
+            var debugViewArrange = 0;
+            //display stuff aspect ratio 16:9
+            var displayWidth = 1600;
+            var displayHeight = 900;
+
+            //view stuff
+            var viewRadius = 0.2; //0.2 pixels(optimal)
+            var viewAngle = 60; //60 degrees(optimal)
+            var viewWidth = 100; //number of points in screen to be processed horizontal
+            var viewNumOfPoints = 2000; //10000  array determines the view distance
+            var viewArray; //array for pixel loading
+            var viewEdgeArray; //array for edges in view
+            var frameNumber = 0; //number of frame being processed
+
+            //objects 
+            var player;
+
+            //interval stuff
+            var processRef;
+            var displayRef;
+
+            //map
+            var map;    //each point in map has an object of PointInMap
+            var mapSize = 1000; //size of the map 1000x1000
+            var sectionID = 0;
+            var sectionArray;
+            var edgeSize = 5;
+            
+            //canvas
+            var testCanvas;
+            var testContext;
+            var gameCanvas;
+            var gameContext;
+
+            //default values for PointInMap
+            var defaultroof = 100; 
+            var defaultground = 10; 
+            var defaultwallTexture = 11; 
+            var defaultroofTexture = 21; 
+            var defaultgroundTexture = 1; 
+            var defaultSettings = [100, 10, 11, 21, 1];
+            
+            var edgeroof = 100; 
+            var edgeground = 99; 
+            var edgewallTexture = 12; 
+            var edgeroofTexture = 21; 
+            var edgegroundTexture = 1; 
+            var edgeSettings = [100, 99, 12, 21, 1];
+
+            //keyboard stuff
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                space: false
+            };
+            function keyboardStuff(){
+                document.addEventListener('keydown', function(event){
+                    if(event.keyCode == 32)
+                        keys.space = true;
+                    if(event.keyCode == 37) 
+                        keys.left = true;
+                    else if(event.keyCode == 39)
+                        keys.right = true;
+                    else if(event.keyCode == 38)
+                        keys.up = true;
+                    else if(event.keyCode == 40)
+                        keys.down = true;
+                    else if(event.keyCode == 17)
+                        keys.ctrl = true;
+                });
+                document.addEventListener('keyup', function(event){
+                    if(event.keyCode == 32)
+                        keys.space = false;
+                    if(event.keyCode == 37)
+                        keys.left = false;
+                    else if(event.keyCode == 39)
+                        keys.right = false;
+                    else if(event.keyCode == 38)
+                        keys.up = false;
+                    else if(event.keyCode == 40)
+                        keys.down = false;
+                    else if(event.keyCode == 17)
+                        keys.ctrl = false;
+                });
+            }
+            //initialize all arrays here
+            function initializeArrays(){
+                map = new Array(mapSize);
+                viewArray = new Array(viewNumOfPoints);
+                sectionArray = new Array();
+                edgeArray = new Array();
+                for(var i = 0; i < mapSize; i++){
+                    map[i] = new Array(mapSize); //assign PointInMap to edges then make function to automatically put in the PointInMap to points inside the section
+                    for(var j = 0; j < mapSize; j++){
+                        map[i][j] = null;
+                    }
+                }
+                for(var i = 0; i < viewNumOfPoints; i++){
+                    viewArray[i] = new Array(viewWidth);
+                    for(var j = 0; j < viewWidth; j++){
+                        viewArray[i][j] = null;
+                    }
+                }
+            }
+            //initialize all canvases here
+            function initializeCanvas(){
+                testCanvas = document.getElementById("testScreen");
+                testContext = testCanvas.getContext("2d");
+                testCanvas.style.height = testCanvas.style.width = mapSize + "px";
+                testCanvas.width = testCanvas.clientWidth;
+                testCanvas.height = testCanvas.clientHeight;
+                gameCanvas = document.getElementById("gameScreen");
+                gameContext = testCanvas.getContext("2d");
+                gameCanvas.style.height = displayHeight + "px";
+                testCanvas.style.width = displayWidth + "px";
+                gameCanvas.width = testCanvas.clientWidth;
+                gameCanvas.height = testCanvas.clientHeight;
+                gameCanvas.style.display = "none";
+            }
+            //fill the defined section
+            function fillSection(/*points should be above lines in this array*/greater, /*below*/less, dataArray, type){
+                var sectionInfo = new Section(sectionID, dataArray);
+                
+                for(var i = 0; i < mapSize; i ++){
+                    for(var j = 0; j < mapSize; j ++){
+                        var check = 0; //should be equal to sum of size of two arrays to intersect with all the lines
+                        var edgeCheck = 0;
+                        var edgeType = 0;
+                        var saveEdgeType = 0;
+                        for(var k = 0; k < greater.length; k++){ //check if the point is above greater lines
+                            edgeType++;
+                            var tempEquation = j - greater[k].gradient * i - greater[k].intercept;
+                            if(tempEquation >= 0){
+                                check++;
+                                if(Math.abs(tempEquation) < 1){
+                                    edgeCheck = 1;
+                                    saveEdgeType = edgeType;
+                                }
+                            }
+                            else if(isFinite(greater[k].gradient) == 0){
+                                if(i >= Math.floor(greater[k].x1)){
+                                    check++;
+                                    if(i == Math.floor(greater[k].x1)){
+                                        edgeCheck = 1;
+                                        saveEdgeType = edgeType;
+                                    }
+                                }
+                            }
+                        }
+                        for(var k = 0; k < less.length; k++){ //check if the point is below less lines
+                            edgeType++;
+                            var tempEquation = j - less[k].gradient * i - less[k].intercept;
+                            if(tempEquation <= 0){
+                                check++;
+                                if(Math.abs(tempEquation) < 1){
+                                    edgeCheck = 1;
+                                    saveEdgeType = edgeType;
+                                }
+                            }
+                            else if(isFinite(less[k].gradient) == 0){
+                                if(i <= Math.floor(less[k].x1)){
+                                    check++;
+                                    if(i == Math.floor(less[k].x1)){
+                                        edgeCheck = 1;
+                                        saveEdgeType = edgeType;
+                                    }
+                                }
+                            }
+                        }
+                        if(check >= (greater.length + less.length)){
+                            map[j][i] = new PointInMap(sectionInfo, sectionID, i, j);
+                            if(edgeCheck == 1){
+                                sectionInfo.edgeArray.push(map[j][i]);
+                                sectionInfo.edgeTypeArray.push(saveEdgeType);
+                            }
+                        }
+                    }
+                }
+                sectionID++;
+                sectionInfo.separateEdges();
+                sectionArray.push(sectionInfo);
+            }
+            function generateRectangle(x1,y1, x2,y2, x3,y3, x4,y4, dataArray){
+                fillSection([new Line(x1,y1,x2,y2),new Line(x1,y1,x4,y4)],[new Line(x2,y2,x3,y3),new Line(x4,y4,x3,y3)], dataArray, 1);
+            }
+            function generateTrapizoid(x1,y1, x2,y2, x3,y3, x4,y4, dataArray){
+                fillSection([new Line(x1,y1,x2,y2),new Line(x2,y2,x3,y3),new Line(x1,y1,x4,y4)],[new Line(x4,y4,x3,y3)], dataArray, 2);
+            }
+            //make the map by putting objects of PointInMap in map array
+            function makeMap(){
+                //fill the whole map with default
+                generateRectangle(0,0, mapSize,0, mapSize,mapSize, 0,mapSize, defaultSettings);
+                //fill the edges with edgedefault
+                generateRectangle(0,0, mapSize,0, mapSize,edgeSize, 0,edgeSize, edgeSettings);
+                generateRectangle(0,mapSize - edgeSize, mapSize,mapSize - edgeSize, mapSize,mapSize, 0,mapSize, edgeSettings);
+                generateRectangle(0,0, edgeSize,0, edgeSize,mapSize, 0,mapSize, edgeSettings);
+                generateRectangle(mapSize - edgeSize,0, mapSize,0, mapSize,mapSize, mapSize - edgeSize,mapSize, edgeSettings);
+                //test stairs
+                
+                defaultSettings[1] = 15; //set ground level
+                generateRectangle(100,100, 200,100, 200,200, 100,200, defaultSettings);
+                defaultSettings[1] = 20; //set ground level
+                generateTrapizoid(100,200, 200,200, 250,300, 50,300, defaultSettings);
+                defaultSettings[1] = 25; //set ground level
+                generateRectangle(50,300, 250,300, 250,400, 50,400, defaultSettings);
+                defaultSettings[1] = 30; //set ground level
+                generateRectangle(250,300, 350,300, 350,400, 250,400, defaultSettings);
+            }
+            function drawTestMap(){
+                //draw pixels for pointonmap
+                for(var i = 0; i < mapSize; i ++){
+                    for(var j = 0; j < mapSize; j ++){
+                        if(map[j][i] != null){
+                            testContext.fillStyle = "rgb(0,0," + (((100 - map[j][i].sectionInfo.ground) / 100) * 255) + ")";
+                            testContext.fillRect(i, j, 1, 1);
+                        }
+                    }  
+                }
+                for(var i = 0; i < sectionArray.length; i++){
+                    for(var j = 0; j < sectionArray[i].edgeArray.length; j++){
+                        if(sectionArray[i].edgeTypeArray[j] == 1){
+                            testContext.fillStyle = "red";
+                        }
+                        if(sectionArray[i].edgeTypeArray[j] == 2){
+                            testContext.fillStyle = "white";
+                        }
+                        if(sectionArray[i].edgeTypeArray[j] == 3){
+                            testContext.fillStyle = "green";
+                        }
+                        if(sectionArray[i].edgeTypeArray[j] == 4){
+                            testContext.fillStyle = "yellow";
+                        }
+                        testContext.fillRect(sectionArray[i].edgeArray[j].x, sectionArray[i].edgeArray[j].y, 1, 1);
+                    }  
+                }
+            }
+            function drawTestMapProcess(){
+                for(var i = 0; i < viewArray.length; i++){
+                    for(var j = 0; j < viewArray[i].length; j++){
+                        if(viewArray[i][j] != null){
+                            testContext.fillStyle = "white";
+                            testContext.fillRect(viewArray[i][j].x, viewArray[i][j].y, 1, 1);
+                        }
+                    }
+                }
+            }
+            function process(){
+                if(keys.left)
+                    player.turnLeft();
+                else if(keys.right)
+                    player.turnRight();
+                else if(keys.up)
+                    player.moveForward();
+                else if(keys.down)
+                    player.moveBackward();
+                else if(keys.ctrl)
+                    drawTestMap();
+                player.stabalizeHeight();
+            }
+            function rearrangeView(){
+                var viewSectionArray = new Array();
+                var tempID;
+                var tempPoint;
+                var tempViewSection;
+                //find all the sections in view and the edges of them
+                for(var i = 0; i < viewArray.length; i++){
+                    for(var j = viewArray[i].length; j >= 0; j--){
+                        tempPoint = viewArray[i][j];
+                        if(tempPoint != null){
+                            var IDCheck = 0;
+                            tempID = tempPoint.sectionID;
+                            //check for new ID
+                            for(var k = 0; k < viewSectionArray.length; k++){
+                                if(tempID == viewSectionArray[k].sectionID){
+                                    IDCheck = 1;
+                                    tempViewSection = viewSectionArray[k];
+                                }
+                            }
+                            //if its a new id add to section ID array
+                            if(IDCheck == 0){
+                                tempViewSection = new viewSection(tempID, tempPoint, i, j)
+                                viewSectionArray.push(tempViewSection);
+                            }
+                            //if not process the location
+                            else{
+                                tempViewSection.processPoints(i, j);
+                            }
+                        }
+                    }
+                }
+                for(var i = 0; i < viewSectionArray.length; i++){
+                    viewSectionArray[i].assignVertices();
+                    viewSectionArray[i].displayVertices();
+                }
+            }
+            function loadObjectsInView(){ //load contents within cone of vision to viewArray
+                frameNumber++;
+                var debugCount = 0;
+                var beta = (viewAngle / 2) / viewWidth; //angle difference between two points
+                var tempX;
+                var tempY;
+                var insertionI = 0;
+                var insertionJ = 0;
+                var overCheck = 0;
+
+                //traverse anti-clockwise from 0 to -viewAngle / 2 
+                for(var i = 0; i < viewWidth / 2; i++){
+                    insertionI = (viewWidth / 2) - (i + 1);
+                    for(var j = 0; j < viewNumOfPoints; j++){
+
+                        overCheck = 0;
+                        insertionI = (viewWidth / 2) - (i + 1);
+                        insertionJ = j;
+
+                        tempX = -j * viewRadius * Math.sin((player.angle - (i * beta)) * Math.PI / 180);
+                        tempX = Math.floor(player.positionX - tempX);
+
+                        tempY = j * viewRadius * Math.cos((player.angle - (i * beta)) * Math.PI / 180);
+                        tempY = Math.floor(player.positionY - tempY);
+
+                        //overflow Check
+                        if(tempX >= mapSize || tempX < 0)
+                            overCheck++;
+                        if(tempY >= mapSize || tempY < 0)
+                            overCheck++;
+                        if(overCheck == 0){
+                            //check if the frame number of the pointInMap is the same if not save it in viewArray
+                            //to get rid of dupilcates
+                            if(map[tempY][tempX].myFrameNumber != frameNumber){
+                                map[tempY][tempX].myFrameNumber = frameNumber;
+                                viewArray[insertionI][insertionJ] = map[tempY][tempX];
+                                debugCount++;
+                            }
+                            else{
+                                viewArray[insertionI][insertionJ] = null;
+                            }
+                        }
+                        else{
+                            viewArray[insertionI][insertionJ] = null;
+                        }
+                            
+                    }
+                }
+                //traverse clockwise from 0 to +viewAngle / 2
+                for(var i = 0; i < viewWidth / 2; i++){
+                    insertionI = (viewWidth / 2) - (i + 1);
+                    for(var j = 0; j < viewNumOfPoints; j++){
+
+                        overCheck = 0;
+                        insertionI = (viewWidth / 2) + i;
+                        insertionJ = j;
+
+                        tempX = -j * viewRadius * Math.sin((player.angle - (-i * beta)) * Math.PI / 180);
+                        tempX = Math.floor(player.positionX - tempX);
+
+                        tempY = j * viewRadius * Math.cos((player.angle - (-i * beta)) * Math.PI / 180);
+                        tempY = Math.floor(player.positionY - tempY);
+
+                        //overflow Check
+                        if(tempX >= mapSize || tempX < 0)
+                            overCheck++;
+                        if(tempY >= mapSize || tempY < 0)
+                            overCheck++;
+                        if(overCheck == 0){
+                            //check if the frame number of the pointInMap is the same if not save it in viewArray
+                            //to get rid of dupilcates
+                            if(map[tempY][tempX].myFrameNumber != frameNumber){
+                                map[tempY][tempX].myFrameNumber = frameNumber;
+                                viewArray[insertionI][insertionJ] = map[tempY][tempX];
+                                debugCount++;
+                            }
+                            else{
+                                viewArray[insertionI][insertionJ] = null;
+                            }
+                        }
+                        else{
+                            viewArray[insertionI][insertionJ] = null;
+                        }
+                    }
+                }
+            }
+
+            function display(){
+                loadObjectsInView();
+                rearrangeView();
+                drawTestMapProcess();
+            }
+
+            function start(){
+                keyboardStuff();
+                initializeArrays();
+                initializeCanvas();
+                makeMap();
+                drawTestMap();
+                player = new Player(10, 10);
+                processRef = window.setInterval(process, 20);
+                displayRef = window.setInterval(display, 50);
+            }
+            class viewSection{
+                constructor(tempID, tempPoint, x, y){
+                    this.sectionID = tempID;
+                    this.vertex1 = tempPoint;
+                    this.vertex2 = tempPoint;
+                    this.vertex3 = tempPoint;
+                    this.vertex4 = tempPoint;
+                    this.xMin = x;
+                    this.xMax = x;
+                    this.yMin = y;
+                    this.yMax = y;
+                }
+                processPoints(x, y){
+                    if(x < this.xMin)
+                        this.xMin = x;
+                    if(y < this.yMin)
+                        this.yMin = y;
+                    if(x > this.xMax)
+                        this.xMax = x;
+                    if(y > this.yMax)
+                        this.yMax = y;
+                }
+                displayVertices(){
+                    console.log("section = " + this.sectionID + " " + this.xMin + ":x:" + this.xMax + " " + this.yMin + ":y:" + this.yMax);
+                }
+                assignVertices(){
+                    //search along xMin for vertex +
+                }
+            }
+            class Player{
+                constructor(x, y){
+                    this.positionX = x;
+                    this.positionY = y;
+                    this.angle = 180;
+                    this.collisionCheckDist = 4; //should be equal to wall thickness
+                    this.moveRadius = 3; //should be less than wall thickness and collisionCheckDist
+                    this.currentGround = map[Math.floor(this.positionY)][Math.floor(this.positionX)].sectionInfo.ground;
+                    this.collisionCheck = new Array(4);
+                    this.collisionCheck[0] = 0; //up
+                    this.collisionCheck[1] = 0; //right
+                    this.collisionCheck[2] = 0; //down
+                    this.collisionCheck[3] = 0; //left
+                    this.updatePosition();
+                }
+                stabalizeHeight(){
+                    if(this.currentGround > map[Math.floor(this.positionY)][Math.floor(this.positionX)].sectionInfo.ground)
+                        this.currentGround--;
+                    else if(this.currentGround < map[Math.floor(this.positionY)][Math.floor(this.positionX)].sectionInfo.ground)
+                        this.currentGround++;
+                }
+                updatePosition(){
+                    testContext.fillStyle = "white";
+                    testContext.fillRect(this.positionX, this.positionY, 1, 1);
+                }
+                moveForward(){
+                    this.collisionCheckFunc();
+                    if(this.collisionCheck[1] == 0){
+                        if(this.angle >= 0 && this.angle < 180)
+                            this.positionX = this.positionX + this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[3] == 0){
+                        if(this.angle >= 180 && this.angle < 360)
+                            this.positionX = this.positionX + this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 0 && this.angle < 90)
+                            this.positionY = this.positionY - this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 270 && this.angle < 360)
+                            this.positionY = this.positionY - this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 90 && this.angle < 270)
+                            this.positionY = this.positionY - this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    this.updatePosition();
+                }
+                moveBackward(){
+                    this.collisionCheckFunc();
+                    if(this.collisionCheck[3] == 0){
+                        if(this.angle >= 0 && this.angle < 180)
+                            this.positionX = this.positionX - this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[1] == 0){
+                        if(this.angle >= 180 && this.angle < 360)
+                            this.positionX = this.positionX - this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 0 && this.angle < 90)
+                            this.positionY = this.positionY + this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 270 && this.angle < 360)
+                            this.positionY = this.positionY + this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 90 && this.angle < 270)
+                            this.positionY = this.positionY + this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    this.updatePosition();
+                }
+                turnLeft(){
+                    this.angle--;
+                    if(this.angle < 0)
+                        this.angle = this.angle + 360;
+                }
+                turnRight(){
+                    this.angle++;
+                    this.angle = this.angle % 360;
+                }
+                collisionCheckFunc(){
+                    //clear collison checks
+                    for(var i = 0; i < 4; i++)
+                        this.collisionCheck[i] = 0;
+                    var intX = Math.floor(this.positionX);
+                    var intY = Math.floor(this.positionY);
+                    for(var i = 0; i < this.collisionCheckDist; i++){
+                        if(intY + i < mapSize){
+                            if(map[intY + i][intX].sectionInfo.ground >  this.currentGround + 5)
+                                this.collisionCheck[2] = 1;
+                        }
+                        if(intX + i < mapSize){
+                            if(map[intY][intX + i].sectionInfo.ground >  this.currentGround + 5)
+                                this.collisionCheck[1] = 1;
+                        }
+                        if(intX - i >= 0){
+                            if(map[intY][intX - i].sectionInfo.ground >  this.currentGround + 5)
+                                this.collisionCheck[3] = 1;
+                        }
+                        if(intY - i >= 0){
+                            if(map[intY - i][intX + i].sectionInfo.ground >  this.currentGround + 5)
+                                this.collisionCheck[0] = 1;
+                        }
+                    }
+                }
+            }
+            class Section{
+                constructor(sectionID, dataArray){
+                    this.sectionID = sectionID;
+                    this.roof = dataArray[0]; //from roof to base there are ids depending on the starting texture
+                    this.ground = dataArray[1]; //from base to ground there are all ids depending on the starting texture
+                    this.wallTexture = dataArray[2]; //texture to draw the wall
+                    this.roofTexture = dataArray[3]; //texture to draw the roof
+                    this.groundTexture = dataArray[4]; //texture to draw the ground
+                    this.vertex = new Array(4);
+                    this.edgeArray = new Array(); //contains points of all edges
+                    this.edgeTypeArray = new Array(); //contains type of edges in edgearray
+                    this.edge = new Array(4);
+                }
+                separateEdges(){
+                    for(var i = 0; i < 4; i++){
+                        this.edge[i] = new Array();
+                    }
+                    for(var i = 0; i < this.edgeArray.length; i++){
+                        this.edgeArray[i].makeEdge(this.edgeTypeArray[i] - 1);
+                        this.edge[this.edgeTypeArray[i] - 1].push(this.edgeArray[i]);
+                    }
+                }
+            };
+            class Line{
+                constructor(x1, y1, x2, y2){
+                    this.x1 = x1;
+                    this.y1 = y1;
+                    this.x2 = x2;
+                    this.y2 = y2;
+                    this.intercept = 0;
+                    this.gradient = 0;
+                    this.findGradient();
+                    this.findIntercept();
+                }
+                findGradient(){
+                    this.gradient = (this.y2 - this.y1) / (this.x2 - this.x1);
+                }
+                findIntercept(){
+                    this.intercept = this.y1 - (this.gradient * this.x1);
+                }
+            };
+            class PointInMap{
+                constructor(sectionInfo, sectionID, x, y){
+                    this.x = x;
+                    this.y = y;
+                    this.sectionInfo = sectionInfo;
+                    this.sectionID = sectionID;
+                    this.isEdge = 0;
+                    this.edgeType = 0;
+                    this.myFrameNumber = 0;
+                }
+                makeEdge(edgeType){
+                    this.isEdge = 1;
+                    this.edgeType = edgeType;
+                }
+            };
+            window.addEventListener("load", start, false);   
+        </script>
+    </head>
+    <body>
+         
+        <canvas id = "gameScreen"  style = "border:1px solid #000000;"></canvas>
+        <canvas id = "testScreen"  style = "border:1px solid #000000;"></canvas>
+        
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick = "leftf();">
+                        </th>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick = "upf();">
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick = "rightf();"> 
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_fire.png width = "150px" height = "150px" onclick = "shootTouch();"> 
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_open.png width = "150px" height = "150px" onclick = "openDoorTouch();"> 
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <div id = "score"><h1>Game for testing, WIP</h1></div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_down.png width = "250px" height = "125px" onclick = "downf();">
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            
+            
+        </div>
+    </body>
+</html>

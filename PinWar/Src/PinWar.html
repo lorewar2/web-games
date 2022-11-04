@@ -1,0 +1,497 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=1575, user-scalable=no" />
+        <style>
+            body{
+                overflow: hidden;
+            }
+        </style>
+        <script>
+            var keys = {
+                left: false,
+                right: false
+            };
+            var processRef;
+            var gameCanvas;
+            var gameContext;
+            var screenHeight = 800;
+            var screenWidth = 640;
+            var numOfBlocks = 15;
+            var blockLocationX = new Array();
+            var blockLocationY = new Array();
+            var blockLocationEndX = new Array();
+            var blockLocationEndY = new Array();
+            var blockWidth = new Array();
+            var blockAngles = new Array();
+            var blockColors = new Array();
+            var bar1Movement = 1;
+            var bar2Movement = 1;
+            var blockPossibleColors = ['darkslategrey', 'black'];
+            var left = 0;
+            var right = 0;
+            var pressed = 0;
+            
+            function start(){
+                //key binding
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                    }
+                });
+                blockInit();
+                canvasInit();
+                ball = new Ball(screenWidth - 90, screenHeight - 150);
+                processRef = window.setInterval(process, 30);
+            }
+            //touch input
+            function leftf(){
+                left = 1;
+                pressed = 10;
+            }
+            function rightf(){
+                right = 1;
+                pressed = 10;
+            }
+            function blockInit(){
+                //player blocks two bars
+                //left bar
+                blockLocationX.push(220);
+                blockLocationY.push(screenHeight - 140);
+                blockWidth.push(50);
+                blockAngles.push(120);
+                //right bar
+                blockLocationX.push(340);
+                blockLocationY.push(screenHeight - 140);
+                blockWidth.push(50);
+                blockAngles.push(240);
+                //walls
+                //first block
+                blockLocationX.push(30);
+                blockLocationY.push(screenHeight - 100);
+                blockWidth.push(screenHeight - 200);
+                blockAngles.push(0.111);
+                //second block
+                //removed
+                //third block
+                blockLocationX.push(30);
+                blockLocationY.push(100);
+                blockWidth.push(screenWidth - 100);
+                blockAngles.push(90);
+                //fourth block
+                blockLocationX.push(screenWidth - 65);
+                blockLocationY.push(screenHeight - 100);
+                blockWidth.push(screenHeight - 200);
+                blockAngles.push(359.9);
+                //entry slot
+                //vertical 1
+                blockLocationX.push(screenWidth - 110);
+                blockLocationY.push(screenHeight - 100);
+                blockWidth.push(screenHeight - 250);
+                blockAngles.push(359.9);
+                //slanted 1
+                blockLocationX.push(screenWidth - 65);
+                blockLocationY.push(150);
+                blockWidth.push(70);
+                blockAngles.push(330);
+                //horizontal 1
+                blockLocationX.push(180);
+                blockLocationY.push(180);
+                blockWidth.push(350);
+                blockAngles.push(87);
+                //player side blocks
+                //slanted left 1
+                blockLocationX.push(30);
+                blockLocationY.push(screenHeight - 300);
+                blockWidth.push(250);
+                blockAngles.push(130);
+                //slanted left 2
+                blockLocationX.push(90);
+                blockLocationY.push(screenHeight - 300);
+                blockWidth.push(100);
+                blockAngles.push(130);
+                //slanted right 1
+                blockLocationX.push(screenWidth - 110);
+                blockLocationY.push(screenHeight - 300);
+                blockWidth.push(250);
+                blockAngles.push(230);
+                //slanted right 2
+                blockLocationX.push(screenWidth - 170);
+                blockLocationY.push(screenHeight - 300);
+                blockWidth.push(100);
+                blockAngles.push(230);
+                //middle triangle
+                //horizontal 1
+                blockLocationX.push(screenWidth/2 - 70);
+                blockLocationY.push(screenHeight/2);
+                blockWidth.push(100);
+                blockAngles.push(90);
+                //slanted left
+                blockLocationX.push(screenWidth/2 - 70);
+                blockLocationY.push(screenHeight/2);
+                blockWidth.push(100);
+                blockAngles.push(30);
+                //slanted right
+                blockLocationX.push(screenWidth/2 + 30);
+                blockLocationY.push(screenHeight/2);
+                blockWidth.push(100);
+                blockAngles.push(330);
+                //make this part automated
+                for(var i = 0; i < numOfBlocks; i++){
+                    var ysize = blockWidth[i] * Math.cos(Math.PI * blockAngles[i] / 180);
+                    var xsize = blockWidth[i] * Math.sin(Math.PI * blockAngles[i] / 180);
+                    blockLocationEndX.push(blockLocationX[i] + xsize);
+                    blockLocationEndY.push(blockLocationY[i] - ysize);
+                    color = blockPossibleColors[Math.floor(0 + Math.random() * 2)];
+                    blockColors.push(color);
+                }
+                blockColors[0] = 'green';
+                blockColors[1] = 'blue';
+                
+            }
+            function canvasInit(){
+                //initialize the canvas
+                gameCanvas = document.getElementById("gameScreen");
+                gameContext = gameCanvas.getContext("2d");
+                //draw the blocks on screen
+                for(var i = 0; i < numOfBlocks; i++){
+                    gameContext.beginPath();
+                    gameContext.moveTo(blockLocationX[i], blockLocationY[i]);
+                    gameContext.lineTo(blockLocationEndX[i], blockLocationEndY[i]);
+                    gameContext.lineWidth = 5;
+                    gameContext.strokeStyle = blockColors[i];
+                    gameContext.stroke();
+                }
+            }
+            function process(){
+                //move player bar 1
+                moveBar1();
+                moveBar2();
+                drawBars();
+                ball.move();
+                ball.drawBall();
+                //touch input process
+                if(pressed > 0){
+                    pressed--;
+                }
+                if(pressed == 1){
+                    left = 0;
+                    right = 0;
+                    pressed = 0;
+                }
+                //lose condition
+                if(ball.locationY > screenHeight){
+                    alert('you lose!');
+                    clearInterval(processRef);
+                }
+            }
+            function drawBars(){
+                for(var i = 0; i < 2; i++){
+                    //clear the previous bar
+                    gameContext.beginPath();
+                    gameContext.moveTo(blockLocationX[i], blockLocationY[i]);
+                    gameContext.lineTo(blockLocationEndX[i], blockLocationEndY[i]);
+                    gameContext.lineWidth = 5;
+                    gameContext.strokeStyle = 'white';
+                    gameContext.stroke();
+                    //calculate the position new bar
+                    var ysize = blockWidth[i] * Math.cos(Math.PI * blockAngles[i] / 180);
+                    var xsize = blockWidth[i] * Math.sin(Math.PI * blockAngles[i] / 180);
+                    blockLocationEndX[i] = (blockLocationX[i] + xsize);
+                    blockLocationEndY[i] = (blockLocationY[i] - ysize);
+                    //draw the new bar
+                    gameContext.beginPath();
+                    gameContext.moveTo(blockLocationX[i], blockLocationY[i]);
+                    gameContext.lineTo(blockLocationEndX[i], blockLocationEndY[i]);
+                    gameContext.lineWidth = 5;
+                    gameContext.strokeStyle = blockColors[i];
+                    gameContext.stroke();
+                }
+            }
+            function moveBar1(){
+                if(keys.left || left){
+                    if(blockAngles[0] > 60){
+                        blockAngles[0] -= 10;
+                        bar1Movement = 1;
+                    }
+                    else{
+                        bar1Movement = 0;
+                    }
+                }
+                else{
+                    if(blockAngles[0] < 120)
+                        blockAngles[0] += 10;
+                        bar1Movement = 0;
+                }
+            }
+            function moveBar2(){
+                if(keys.right || right){
+                    if(blockAngles[1] < 300){
+                        blockAngles[1] += 10;
+                        bar2Movement = 1;
+                    }
+                    else{
+                        bar2Movement = 0;
+                    }
+                }
+                else{
+                    if(blockAngles[1] > 240)
+                        blockAngles[1] -= 10;
+                        bar2Movement = 0;
+                }
+            }
+            class Ball{
+                constructor(x, y){
+                    this.prevLocationX = x;
+                    this.prevLocationY = y;
+                    this.locationX = x;
+                    this.locationY = y;
+                    this.radius = 8;
+                    this.radiusClearOffset = 1;
+                    this.collisionCheckRadius = 10;
+                    this.color = 'black';
+                    this.speedX = 0;
+                    this.speedY = -150;
+                    this.friction = 0.02;
+                    this.collisionPenalty = 0.8;
+                    this.gravity = 0.2;
+                    this.maxSpeed = 20;
+                    this.travelAngle = 0;
+                    this.collisionDelay = 0;
+                }
+                move(){
+                    //apply const air drag to the ball
+                    if(this.speedX > 0)
+                        this.speedX -= this.friction;
+                    if(this.speedY > 0)
+                        this.speedY -= this.friction;
+                    else
+                        this.speedY += this.friction;
+                    //apply gravity to the ball
+                    this.speedY += this.gravity;
+                    //do not exceed maxspeed
+                    if(this.speedY > this.maxSpeed)
+                        this.speedY = this.maxSpeed;
+                    //check for collision
+                    this.collisionCheck();
+                    //save the prevlocations for clearing
+                    this.prevlocationX = this.locationX;
+                    this.prevLocationY = this.locationY;
+                    //get the new location based on the data
+                    this.locationX += this.speedX;
+                    this.locationY += this.speedY;
+                    //calculate the travelangle
+                    if(this.speedX != 0){
+                        this.travelAngle = ((Math.atan2(this.speedX, -this.speedY) * 180) / Math.PI);
+                    }
+                        
+                    else
+                        if(this.speedY >= 0)
+                            this.travelAngle = 180;
+                        else if(this.speedY < 0)
+                            this.travelAngle = 0;
+                    //reset travel angle if -ve
+                    if(this.travelAngle < 0)
+                        this.travelAngle += 360;
+                }
+                collisionCheck(){
+                    //change the interceptdist depending on the travel vector
+                    var travelAngleVector = Math.abs(Math.sqrt((Math.pow(this.speedY, 2) + Math.pow(this.speedX, 2))));
+                    var interceptDist = travelAngleVector;
+                    var collisionBlockType = 0;
+                    //this draws lines around the ball and check which lines intercept the block lines
+                    var collisionAngle = 0;
+                    var minDistance = 1000;
+                    //check collision in 8 directions
+                    for(var i = 0; i < 8; i++){
+                        //current angle to check
+                        var currentAngle = i * 45;
+                        //position to check
+                        var checkX = this.locationX + this.collisionCheckRadius * Math.sin(Math.PI * currentAngle / 180);
+                        var checkY = this.locationY - this.collisionCheckRadius * Math.cos(Math.PI * currentAngle / 180);
+                        gameContext.fillStyle = 'red';
+                        gameContext.fillRect(checkX, checkY, 1, 1);
+                        //get the line from center to check position
+                        //get the gradient
+                        var gradLineBall = (checkY - this.locationY) / (checkX - this.locationX);
+                        //get the intercept
+                        var interceptBall = checkY - gradLineBall * checkX;
+                        //draw ball line to check debug
+                        // for(var k = 0; k < 100; k++){
+                        //     var xpoint = k * 10;
+                        //     var ypoint = xpoint * gradLineBall + interceptBall;
+                        //     gameContext.fillStyle = 'blue';
+                        //     gameContext.fillRect(xpoint, ypoint, 5, 5);
+                        // }
+                        for(var j = 0; j < numOfBlocks; j++){
+                            //get the line from start of block to end
+                            //get the gradient
+                            if((blockLocationY[j] - blockLocationEndY[j]) == 0)
+                                var gradLineBlock = 0;
+                            else
+                                var gradLineBlock = (blockLocationY[j] - blockLocationEndY[j]) / (blockLocationX[j] - blockLocationEndX[j]);
+                            //get the intercept
+                            var interceptBlock = blockLocationY[j] - gradLineBlock * blockLocationX[j];
+                            //draw grad line to check debug
+                            // for(var k = 0; k < 100; k++){
+                            //     var xpoint = k * 10;
+                            //     var ypoint = xpoint * gradLineBlock + interceptBlock;
+                            //     gameContext.fillStyle = 'orange';
+                            //     gameContext.fillRect(xpoint, ypoint, 5, 5);
+                            // }
+                            //check if gradients are same
+                            if(gradLineBlock == gradLineBall){
+
+                            }
+                            else{
+                                //find the intercept point between two lines
+                                var xintercept = (interceptBlock - interceptBall) / (gradLineBall - gradLineBlock);
+                                if(Number.isNaN(xintercept)){
+                                    if(gradLineBall > 1000000 || gradLineBall < -10000000)
+                                        xintercept = this.locationX;
+                                    else
+                                        xintercept = this.locationX;
+                                }
+                                if(gradLineBall < -10000000 || gradLineBall > 1000000)
+                                    var yintercept = gradLineBlock * xintercept + interceptBlock;
+                                else
+                                    var yintercept = gradLineBall * xintercept + interceptBall;
+                                //check if the interception point is valid
+                                var check = 1;
+                                //check x
+                                if((xintercept > blockLocationEndX[j]) && (xintercept > blockLocationX[j]))
+                                    check = 0;
+                                if((xintercept < blockLocationEndX[j]) && (xintercept < blockLocationX[j]))
+                                    check = 0;
+                                //check y
+                                if((yintercept > blockLocationEndY[j]) && (yintercept > blockLocationY[j]))
+                                    check = 0;
+                                if((yintercept < blockLocationEndY[j]) && (yintercept < blockLocationY[j]))
+                                    check = 0;
+                                //find the distance between checklocation and intercept
+                                if(check){
+                                    var dist = Math.sqrt(Math.pow((yintercept - checkY), 2) + Math.pow((xintercept - checkX), 2));
+                                    if(dist <= minDistance){
+                                        minDistance = dist;
+                                        collisionAngle = currentAngle;
+                                        collisionBlockType = j;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if(minDistance < interceptDist){
+                        //add a fraction of speed to the opposing side
+                        // var oppositeAngle = ((collisionAngle + 180) % 360);
+                        // var oppositeSpeed = this.speedY * Math.cos(Math.PI * oppositeAngle / 180) + this.speedX * Math.sin(Math.PI * oppositeAngle / 180);
+                        // this.speedX = oppositeSpeed * Math.sin(Math.PI * oppositeAngle / 180);
+                        // this.speedY = oppositeSpeed * Math.cos(Math.PI * oppositeAngle / 180);
+                        //check the speed which is perpendicular to the collsion
+                        // var perpendicularAngle = ((collisionAngle + 90) % 360);
+                        // var perpendicularSpeed = this.speedY * Math.cos(Math.PI * perpendicularAngle / 180) + this.speedX * Math.sin(Math.PI * perpendicularAngle / 180);
+                        // this.speedX = perpendicularSpeed * Math.sin(Math.PI * perpendicularAngle / 180);
+                        // this.speedY = perpendicularSpeed * Math.cos(Math.PI * perpendicularAngle / 180);
+                        
+                        //refleciton angles (the angles of the hypothetical mirror)
+                        var reflectionplus90 = (collisionAngle + 90);
+                        var reflectionminus90 = (collisionAngle - 90);
+                        var differenceAngle = 0;
+                        //check which angle is closer to the travel angle and then calculate the reflectedAngle
+                        if(Math.abs(reflectionplus90 - this.travelAngle) < Math.abs(reflectionminus90 - this.travelAngle)){
+                            differenceAngle = Math.abs(reflectionplus90 - this.travelAngle);
+                            var reflectedAngle = this.travelAngle + differenceAngle * 2;
+                        }
+                        else{
+                            differenceAngle = Math.abs(reflectionminus90 - this.travelAngle);
+                            var reflectedAngle = this.travelAngle + differenceAngle * 2;
+                        }
+                        //in case plus90 is larger, the angle is in the mirror 
+                        if(reflectionplus90 > reflectionminus90 && reflectionplus90 > reflectedAngle && reflectionminus90 < reflectedAngle){
+                            reflectedAngle -= differenceAngle * 4;
+                            console.log('!!!!!!!!1');
+                        }
+                        //in case minus90 is larget, the angle is in the mirror
+                        else if(reflectionplus90 <= reflectionminus90 && reflectionplus90 < reflectedAngle && reflectionminus90 > reflectedAngle){
+                            reflectedAngle -= differenceAngle * 4;
+                            console.log('!!!!!!!!2');
+                        }
+                        if(this.collisionDelay <= 0){
+                            //reset angle
+                            reflectedAngle = (reflectedAngle + 360) % 360;
+                            //when hit with bars make it fly off in a random direction
+                            if((collisionBlockType == 0 || collisionBlockType == 1) && (bar1Movement || bar2Movement)){
+                                var modifier = 2;
+                                if(collisionBlockType == 0)
+                                    reflectedAngle = Math.floor(-5 + Math.random() * 15) * 10
+                                else
+                                    reflectedAngle = Math.floor(-10 + Math.random() * 15) * 10
+                                travelAngleVector = 10;
+                            }
+                            else
+                                var modifier = 1;
+                            //console.log(minDistance + ' ' + collisionAngle + ' ' + this.travelAngle + ' plus' + reflectionplus90 + ' minus' + reflectionminus90 + ' reflected' + reflectedAngle + ' diff' + differenceAngle);
+                            this.speedX = travelAngleVector * modifier * this.collisionPenalty * Math.sin(Math.PI * reflectedAngle / 180);
+                            this.speedY = -travelAngleVector * modifier * this.collisionPenalty * Math.cos(Math.PI * reflectedAngle / 180);
+                            this.collisionDelay = 0;
+                        }
+                        else{
+                            this.collisionDelay--;
+                        }
+                        
+                    }
+                    this.collisionDelay--;
+                    
+                }
+                drawBall(){
+                    //clear the previous ball location
+                    gameContext.beginPath();
+                    gameContext.arc(this.prevlocationX, this.prevLocationY, this.radius + this.radiusClearOffset, 0, 2 * Math.PI, false);
+                    gameContext.fillStyle = 'white';
+                    gameContext.fill();
+                    //draw the new location
+                    gameContext.beginPath();
+                    gameContext.arc(this.locationX, this.locationY, this.radius, 0, 2 * Math.PI, false);
+                    gameContext.fillStyle = 'green';
+                    gameContext.fill();
+                    gameContext.lineWidth = 1;
+                    gameContext.strokeStyle = '#003300';
+                    gameContext.stroke();
+                }
+            }
+            window.addEventListener("load", start, false);   
+        </script>
+    </head>
+    <body>
+        <canvas id = "gameScreen" width = "600" height = "800" style = "border:1px solid #000000;"></canvas>
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="leftf();">
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="rightf();"> 
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "score"><h1>Score: 0</h1></div>
+                        </th>
+                        <th rowspan = "3" colspan = "1">
+                            <div id = "highscores"><h1>HighScores</h1></div>
+                        </th>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </body>
+</html>
