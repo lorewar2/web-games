@@ -1,0 +1,1832 @@
+<html>
+    <head>
+        <style>
+            body{
+                overflow: hidden;
+            }
+            img {
+                max-width: 100%;
+            }
+        </style>
+        <script>
+            var arrayOfScreen = new Array(20); //y , x
+            var arrayOfBlocks = new Array(20); //y , x
+            var arrayOfColors = new Array(20);
+            var left = 0;
+            var right = 0;
+            var rotate = 0;
+            var down = 0;
+            var test;
+            var score;
+            document.addEventListener('keydown', function(event) {
+                if(event.keyCode == 37) {
+                    left = 1;
+                }
+                else if(event.keyCode == 39) {
+                    right = 1;
+                }
+                else if(event.keyCode == 38) {
+                    rotate = 1;
+                }
+                else if(event.keyCode == 40) {
+                    down = 1;
+                }
+            });
+            function sendResult(){
+                var comment = document.getElementById("comment").value;
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        alert(comment + ", your result sent succesfully");
+                        window.location.reload(false); 
+                    }
+                };
+                xmlhttp.open("GET","TetrisWar_assets/saveResultsTetris.php?q=" + comment + "&r=" + score , true);
+                xmlhttp.send();
+		    }
+            function showScores() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("highscores").innerHTML = this.responseText;
+                    }
+                };
+                xmlhttp.open("GET","TetrisWar_assets/getResultsTetris.php",true);
+                xmlhttp.send();
+		    }
+            class Block{
+                constructor(type){
+                    this.type = Math.floor( 0 + Math.random() * 6); //type 0:square 1:l-block 2:t-block 3:alpha-block
+                    this.next = Math.floor( 0 + Math.random() * 6);
+                    this.color = Math.floor( 0 + Math.random() * 4); //color 0:red -- 4
+                                      //4:beta-block 5:line-block
+                    this.xposition = 5;//center xposition, 5th block
+                    this.yposition = 0;//center yposition, 2th block
+                    this.orientation = Math.floor( 0 + Math.random() * 4);; //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                    this.blockspace = new Array(); //three blocks other than center
+                    this.blockspace.push([0,0],[0,0],[0,0]);
+                    this.prevorientation = 3;
+                    this.calculateBlockSpace();
+                    this.prevx = 5;
+                    this.prevy = 1;
+                    this.lose = 0;
+                    this.score = 0;
+                    
+                }
+                drawBlock(){
+                    this.prevx = this.xposition;
+                    this.prevy = this.yposition;
+                    this.prevorientation = this.orientation;
+                    for (var i = 0; i < 20; i++) { 
+                        for (var j = 0; j < 10; j++) { 
+                            if(arrayOfBlocks[i][j] == 0){
+                                test = document.getElementById(arrayOfScreen[i][j]);
+                                test.setAttribute("src","blank.jpg");
+                            }
+                            else{
+                                if(arrayOfColors[i][j] == 0){
+                                    test = document.getElementById(arrayOfScreen[i][j]);
+                                    test.setAttribute("src","TetrisWar_assets/0.jpg");
+                                }
+                                if(arrayOfColors[i][j] == 1){
+                                    test = document.getElementById(arrayOfScreen[i][j]);
+                                    test.setAttribute("src","TetrisWar_assets/1.jpg");
+                                }
+                                if(arrayOfColors[i][j] == 2){
+                                    test = document.getElementById(arrayOfScreen[i][j]);
+                                    test.setAttribute("src","TetrisWar_assets/2.jpg");
+                                }
+                                if(arrayOfColors[i][j] == 3){
+                                    test = document.getElementById(arrayOfScreen[i][j]);
+                                    test.setAttribute("src","TetrisWar_assets/3.jpg");
+                                }
+                                    
+                            }
+                    } 
+                    }
+                    if((this.blockspace[0][0] >= 0) && (this.blockspace[0][1] >= 0)){
+                        test = document.getElementById(arrayOfScreen[this.blockspace[0][0]][this.blockspace[0][1]]);
+                        test.setAttribute("src","TetrisWar_assets/" + this.color + ".jpg");
+                    }
+                    if((this.blockspace[1][0] >= 0) && (this.blockspace[1][1] >= 0)){
+                        test = document.getElementById(arrayOfScreen[this.blockspace[1][0]][this.blockspace[1][1]]);
+                        test.setAttribute("src","TetrisWar_assets/" + this.color + ".jpg");
+                    }
+                    if((this.blockspace[2][0] >= 0) && (this.blockspace[2][1] >= 0)){
+                        test = document.getElementById(arrayOfScreen[this.blockspace[2][0]][this.blockspace[2][1]]);
+                        test.setAttribute("src","TetrisWar_assets/" + this.color + ".jpg");
+                    }
+                    if((this.yposition >= 0) && (this.xposition >= 0)){
+                        test = document.getElementById(arrayOfScreen[this.yposition][this.xposition]);
+                        test.setAttribute("src","TetrisWar_assets/" + this.color + ".jpg");
+                    }
+                }
+                reset(){
+                    this.type = this.next; //type 0:square 1:l-block 2:t-block 3:alpha-block
+                    this.next = Math.floor( 0 + Math.random() * 6);
+                    this.color = Math.floor( 0 + Math.random() * 4);
+                                      //4:beta-block 5:line-block
+                    this.xposition = 5;//center xposition, 5th block
+                    this.yposition = 0;//center yposition, 2th block
+                    this.orientation = Math.floor( 0 + Math.random() * 4);; //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                    this.blockspace[0][0] = 0;
+                    this.blockspace[0][1] = 0;
+                    this.blockspace[1][0] = 0;
+                    this.blockspace[1][1] = 0;
+                    this.blockspace[2][0] = 0;
+                    this.blockspace[2][1] = 0;
+                    this.prevx = 5;
+                    this.prevy = 1;
+                    this.calculateBlockSpace();
+                    
+                    
+                }
+                write(){
+                    arrayOfBlocks[this.blockspace[0][0]][this.blockspace[0][1]] = 1;
+                    arrayOfBlocks[this.blockspace[1][0]][this.blockspace[1][1]] = 1;
+                    arrayOfBlocks[this.blockspace[2][0]][this.blockspace[2][1]] = 1;
+                    arrayOfBlocks[this.yposition][this.xposition] = 1;
+
+                    arrayOfColors[this.blockspace[0][0]][this.blockspace[0][1]] = this.color;
+                    arrayOfColors[this.blockspace[1][0]][this.blockspace[1][1]] = this.color;
+                    arrayOfColors[this.blockspace[2][0]][this.blockspace[2][1]] = this.color;
+                    arrayOfColors[this.yposition][this.xposition] = this.color;
+                    this.reset();
+                }
+                loseCheck(){
+                    var lose1 = 0;
+                    for (var j = 0; j < 10; j++){
+                        if(arrayOfBlocks[0][j] == 1){
+                            lose1 = 1;
+                        }
+                        if(arrayOfBlocks[1][j] == 1){
+                            lose1 = 1;
+                        } 
+                    }
+                    if(lose1){
+                        this.lose = 1;
+                    }
+                }
+                tetris(){
+                    for (var i = 0; i < 20; i++){
+                        var tetris = 1;
+                        for (var j = 0; j < 10; j++){
+                            if(arrayOfBlocks[i][j] == 0){
+                                tetris = 0;
+                            }   
+                        }
+                        if(tetris == 1){
+                            this.score++;
+                            //alert("tetris");
+                            for(var k = i; k > 0; k--){
+                                for (var j = 0; j < 10; j++){
+                                    arrayOfBlocks[k][j] = arrayOfBlocks[k-1][j];
+                                    arrayOfColors[k][j] = arrayOfColors[k-1][j];
+                                }
+                            }
+                        }
+                    }    
+                }
+                //changing orientation, button presses
+                calculateBlockSpace(){
+                    var ok = 1;
+                    
+                    switch(this.type){
+                        
+                        //square //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                        case 0:{
+                            
+                            switch(this.orientation){
+                                default:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition - 1)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition - 1);
+                                        this.blockspace[2][0] = (this.yposition - 1);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        //l-block //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                        case 1:{
+                            switch(this.orientation){
+                                case 0:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                        }  
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 2) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition + 2)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition - 1);
+                                        this.blockspace[0][1] = (this.xposition);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition + 1);
+                                        this.blockspace[2][0] = (this.yposition);
+                                        this.blockspace[2][1] = (this.xposition + 2);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 1:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                        if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                        }  
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 2) < 20)){
+                                        if(arrayOfBlocks[(this.yposition + 2)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition + 1);
+                                        this.blockspace[1][0] = (this.yposition + 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition + 2);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 2:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 2) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 2)] == 0){
+                                        }  
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                        if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition - 2);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 3:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 2) < 20)){
+                                        if(this.yposition - 2 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 2)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                        
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition - 2);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        //t-block //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                        case 2:{
+                            switch(this.orientation){
+                                case 0:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                        if(this.yposition - 2 > 0){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                        
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition);
+                                        this.blockspace[2][1] = (this.xposition + 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 1:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition + 1);
+                                        this.blockspace[0][1] = (this.xposition);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition);
+                                        this.blockspace[2][1] = (this.xposition + 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 2:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition + 1);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 3:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        //alpha-block //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                        case 3:{
+                            switch(this.orientation){
+                                case 0:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition - 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition - 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 1:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition - 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition + 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition - 1);
+                                        this.blockspace[2][1] = (this.xposition - 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 2:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition - 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition - 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 3:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if(this.yposition - 1 > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition - 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition + 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition - 1);
+                                        this.blockspace[2][1] = (this.xposition - 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        //beta-block //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                        case 4:{
+                            switch(this.orientation){
+                                case 0:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition - 1);
+                                        this.blockspace[0][1] = (this.xposition);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition + 1);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition + 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 1:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                            
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition - 1);
+                                        this.blockspace[2][1] = (this.xposition + 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 2:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition - 1);
+                                        this.blockspace[0][1] = (this.xposition);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition + 1);
+                                        this.blockspace[2][0] = (this.yposition + 1);
+                                        this.blockspace[2][1] = (this.xposition + 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 3:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) > 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition - 1);
+                                        this.blockspace[1][0] = (this.yposition - 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition - 1);
+                                        this.blockspace[2][1] = (this.xposition + 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        //line-block //0:1st quat, 1:4nd quat 2:3rd quat 3:4th quat
+                        case 5:{
+                            switch(this.orientation){
+                                case 0:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) >= 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                        
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 2) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 2)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition - 1);
+                                        this.blockspace[0][1] = (this.xposition);
+                                        this.blockspace[1][0] = (this.yposition + 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition + 2);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 1:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 2) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition - 2)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition + 1);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition - 2);
+                                        this.blockspace[2][0] = (this.yposition);
+                                        this.blockspace[2][1] = (this.xposition - 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 2:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition - 1) < 20)){
+                                        if((this.yposition - 1) >= 0){
+                                            if(arrayOfBlocks[(this.yposition - 1)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                        }
+                                        
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 1) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 1)][(this.xposition)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition) >= 0) && ((this.yposition + 2) < 20)){
+                                            if(arrayOfBlocks[(this.yposition + 2)][(this.xposition)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition - 1);
+                                        this.blockspace[0][1] = (this.xposition);
+                                        this.blockspace[1][0] = (this.yposition + 1);
+                                        this.blockspace[1][1] = (this.xposition);
+                                        this.blockspace[2][0] = (this.yposition + 2);
+                                        this.blockspace[2][1] = (this.xposition);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                                case 3:{
+                                    if(((this.xposition) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 1) >= 0) && ((this.yposition) < 20)){
+                                        if(arrayOfBlocks[(this.yposition)][(this.xposition - 1)] == 0){
+                                        }
+                                        else{
+                                            ok = 0;
+                                        }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition - 2) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition - 2)] == 0){
+                                            }  
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(((this.xposition + 1) >= 0) && ((this.yposition) < 20)){
+                                            if(arrayOfBlocks[(this.yposition)][(this.xposition + 1)] == 0){
+                                            }
+                                            else{
+                                                ok = 0;
+                                            }
+                                    }
+                                    else{
+                                        ok = 0;
+                                    }
+
+                                    if(ok){
+                                        this.blockspace[0][0] = (this.yposition);
+                                        this.blockspace[0][1] = (this.xposition + 1);
+                                        this.blockspace[1][0] = (this.yposition);
+                                        this.blockspace[1][1] = (this.xposition - 2);
+                                        this.blockspace[2][0] = (this.yposition);
+                                        this.blockspace[2][1] = (this.xposition - 1);
+                                        this.drawBlock();
+                                    }
+                                    else{
+                                        //alert("not ok");
+                                        this.xposition = this.prevx;
+                                        this.yposition = this.prevy;
+                                        this.orientation = this.prevorientation;
+                                        this.drawBlock();
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                showType(){
+                    return this.type;
+                }
+            }
+            function drawScreen(){
+                var division = document.getElementById("screen");
+                var i = 200;
+                var j = 1;
+                while( j <= i){
+                    division.innerHTML += "<img src = blank.jpg id ='" + j + "' width = '10%' height = '4.5%'>";
+                    j++;      
+                }
+                //initializing stuff
+                for (var i = 0; i < arrayOfScreen.length; i++) { 
+                    arrayOfScreen[i] = []; 
+                    arrayOfBlocks[i] = []; 
+                    arrayOfColors[i] = [];
+                }
+                var h = 1;
+                for (var i = 0; i < 20; i++) { 
+                    for (var j = 0; j < 10; j++) { 
+                        arrayOfScreen[i][j] = h; //y , x
+                        arrayOfBlocks[i][j] = 0; //y , x
+                        arrayOfColors[i][j] = 0;
+                        h++;
+                    } 
+                }
+            }
+            var prevScore;
+            var timerRef;
+            var gravityRef;
+            var block;
+            var gravityCheck = 1;
+            var original = 600;
+            function start(){
+                drawScreen();
+                showScores();
+                timerRef = window.setInterval(timer, 100);
+                gravityRef = window.setInterval(gravity, original);
+                block = new Block(0);
+                var scoreDisplay = document.getElementById("score");
+                scoreDisplay.innerHTML = "<h1> Score: " + block.score + "</h1>";
+                if(block.next == 0){
+                    test = document.getElementById("next");
+                    test.setAttribute("src","TetrisWar_assets/square.jpg");
+                }
+                if(block.next == 1){
+                    test = document.getElementById("next");
+                    test.setAttribute("src","TetrisWar_assets/l-block.jpg");
+                }
+                if(block.next == 2){
+                    test = document.getElementById("next");
+                    test.setAttribute("src","TetrisWar_assets/t-block.jpg");
+                }
+                if(block.next == 3){
+                    test = document.getElementById("next");
+                    test.setAttribute("src","TetrisWar_assets/alpha-block.jpg");
+                }
+                if(block.next == 4){
+                    test = document.getElementById("next");
+                    test.setAttribute("src","TetrisWar_assets/beta-block.jpg");
+                }
+                if(block.next == 5){
+                    test = document.getElementById("next");
+                    test.setAttribute("src","TetrisWar_assets/line-block.jpg");
+                }
+            }
+            function timer(){
+                if(left == 1){
+                    block.xposition--;
+                    block.calculateBlockSpace();
+                    left = 0;
+                }
+                if(right == 1){
+                    block.xposition++;
+                    block.calculateBlockSpace();
+                    right = 0;
+                }
+                if(rotate == 1){
+                    block.orientation++;
+                    if(block.orientation == 4){
+                        block.orientation = 0;
+                    }
+                    block.calculateBlockSpace();
+                    rotate = 0;
+                }
+                if(down == 1){
+                    clearInterval(gravityRef);
+                    gravityRef = window.setInterval(gravity, 20);
+                    down = 0;
+                }
+            }
+            function gravity(){
+                block.loseCheck();
+                if(block.lose){
+                    alert("you lose");
+                    clearInterval(timerRef);
+                    clearInterval(gravityRef);
+                    score = block.score;
+                    var scoreDisplay = document.getElementById("score");
+                    scoreDisplay.innerHTML = "<h1>Your score is :" + score + "</h1>";
+                    if(score > 0){
+                        scoreDisplay.innerHTML += "Enter you name: <input type = 'text' id = 'comment'  placeholder = 'Name' style='width: 300px; height: 50px;'> ";
+                        scoreDisplay.innerHTML += "<input type = 'submit' onclick = 'sendResult()'>";
+                    }
+                    else{
+                        scoreDisplay.innerHTML += "<h1>Try again</h1>";
+                    }    
+                }
+                prevY = block.yposition;
+                block.yposition++;
+                block.calculateBlockSpace();
+                if(block.yposition == prevY){
+                    if(gravityCheck > 0 ){
+                        gravityCheck--;
+                    }
+                    else{
+                        
+                        prevY = 100;
+                        gravityCheck = 1;
+                        block.write();
+                        block.tetris();
+                        if(block.next == 0){
+                            test = document.getElementById("next");
+                            test.setAttribute("src","TetrisWar_assets/square.jpg");
+                        }
+                        if(block.next == 1){
+                            test = document.getElementById("next");
+                            test.setAttribute("src","TetrisWar_assets/l-block.jpg");
+                        }
+                        if(block.next == 2){
+                            test = document.getElementById("next");
+                            test.setAttribute("src","TetrisWar_assets/t-block.jpg");
+                        }
+                        if(block.next == 3){
+                            test = document.getElementById("next");
+                            test.setAttribute("src","TetrisWar_assets/alpha-block.jpg");
+                        }
+                        if(block.next == 4){
+                            test = document.getElementById("next");
+                            test.setAttribute("src","TetrisWar_assets/beta-block.jpg");
+                        }
+                        if(block.next == 5){
+                            test = document.getElementById("next");
+                            test.setAttribute("src","TetrisWar_assets/line-block.jpg");
+                        }
+                        
+                        if(prevScore != block.score){
+                            original = original - 10;
+                            prevScore = block.score;
+                            var scoreDisplay = document.getElementById("score");
+                            scoreDisplay.innerHTML = "<h1> Score: " + block.score + "</h1>";
+                            score = block.score;
+                        }
+                        clearInterval(gravityRef);
+                        gravityRef = window.setInterval(gravity, original);
+                    }
+                }
+
+            }
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+        <div id = "screen" style = "width: 500px; height: 1000px;">
+        </div>
+        <div id = "controls" style = "width: 90%; height :30%">
+                <table align = "left" table border = "1" style = "background-color: white; ">
+                    <tbody>
+                        <tr>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_left.png width = "150px" height = "150px" onclick ="left = 1;">
+                            </th>
+                            <th rowspan = "1" colspan = "3">
+                                <img src = snakearrow_up.png width = "250px" height = "125px" onclick ="rotate = 1;">
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_right.png width = "150px" height = "150px" onclick ="right = 1;"> 
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <img src = snakearrow_right.png id = "next" width = "150px" height = "150px"> 
+                            </th>
+                            <th rowspan = "3" colspan = "1">
+                                <div id = "score"><h1>Score: 0</h1></div>
+                            </th>
+                            
+                            <th rowspan = "3" colspan = "1">
+                                <div id = "highscores"><h1>HighScores</h1></div>
+                            </th>
+                        </tr>
+                        <tr>
+                            <th rowspan = "1" colspan = "3">
+                                <img src = snakearrow_down.png width = "250px" height = "125px" onclick ="down = 1;">
+                            </th>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+                <div id = "assets">
+                    <img src = TetrisWar_assets/0.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/1.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/2.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/3.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/square.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/alpha-block.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/beta-block.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/l-block.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/t-block.jpg width = "20px" height = "20px">
+                    <img src = TetrisWar_assets/line-block.jpg width = "20px" height = "20px">
+                </div>
+        </div>
+        
+    </body>
+</html>

@@ -1,0 +1,1622 @@
+<html>
+    <head>
+        <meta name = "viewport" content = "width = 1575px, user-scalable = no" />
+        <style>
+            body{
+                overflow: hidden;
+            }
+            .node {
+                display: block;
+                position: absolute;
+                top: 0;
+                left: 0;
+            }
+        </style>
+        <script src = 'WolfWar3D_assets/jquery-3.5.1.js'></script>
+        <script src = 'WolfWar3D_assets/textureMap.js'></script>
+        <script>
+            //todo: all done
+
+            //item assets 
+
+            var asset;
+
+            //objects
+            var player;
+            var enemyArray; //array of enemies
+            var itemArray; //array of items
+            var playerStartX = 860;
+            var playerStartY = 40;
+
+            //interval stuff
+            var processRef;
+            var drawRef;
+            var pickupRef;
+            var gateRef;
+            var aiRef;
+
+
+            //view stuff
+            var viewRadius = 0.2; //0.2 pixels(optimal)
+            var viewAngle = 60; //60 degrees(optimal)
+            var screenArray; //array to calculate the stuff on screen, draw lines put in textures etc
+            var itemScreenArray; //array to draw items on screen
+            var screenEnemyArray; //array to draw enemies on screen
+            var numOfPoints = 2000; //10000  array determines the view distance
+            var scaleForScreen = 0;
+
+            //gate stuff
+            var gateToBeOpened = null;
+            var gateOpening = 0;
+            var gateOpenTimer = 0;
+            var gateOpenMaxTime = 10;
+            var timeOutMaxTime = 3;
+            var timeOut = timeOutMaxTime;
+            var inRange;
+
+            //gun stuff
+            var shootTimeout = 0;
+            var shootAnimation = 0;
+
+            //screen calculation stuff
+            var widthPixels = 1440;
+            var heightPixels = 960;
+            var wallHeight = 10; //height of the wall when in full view
+            var itemHeight = 10; //height of the items when in full view
+            var maxDistance = 10000; //~map size for full view
+            var fullViewDistance = 100; //full height of wall or items displayed when 10px away
+            
+
+            var wallDistArray;  //distance array to calculate the size of walls
+            var mapIDArray; //support for distance array to distinguish how walls are separated
+            var itemDistArray; //distance array to calculate size of items
+            var itemMapIDArray; //support for distace array to distinguish separated items
+            
+            //canvas stuff
+            var testCanvas;
+            var testContext;
+            var gameCanvas;
+            var gameContext;
+            var textureCanvas;
+            var textureContext;
+
+            //item making stuff
+            var itemMapArray; //array for pixels of items
+            var itemMapID = 1; //each item has a unique id
+            var itemArray;
+            var tempItem;
+            var numberOfAssets = 33;
+
+            //pickup stuff << items
+            var pickupArray;
+
+            //wall making stuff
+            var mapSize = 1008; //1008x1008
+            var mapArray; //array for pixel id map
+            var wallArray; //array for wall objects
+            var gateArray;
+            var textureLength = 10; //length of one texture image
+
+            var wallID = 0; //each wall has unique id
+            var mapID = 1; //each pixel has unique id
+            var mapWall; //assign pixel id to wall id
+
+            var thinWallThickness = 1; //obsolete
+            var gateThickness = 1;  //obsolete
+
+            //error correction 
+            var textureMappingCorrection = 6;
+
+            //touch input stuff
+            var pressed = 10;
+            var touchup = 0;
+            var touchleft = 0;
+            var touchright = 0;
+            var touchdown = 0;
+
+            //touch input
+            function leftf(){
+                pressed = 10;
+                touchleft = 1;
+            }
+            function upf(){
+                pressed = 10;
+                touchup = 1;
+            }
+            function rightf(){
+                pressed = 10;
+                touchright = 1;
+            }
+            function downf(){
+                pressed = 10;
+                touchdown = 1;
+            }
+            function openDoorTouch(){
+                openGateCommand();
+            }
+            function shootTouch(){
+                shootFunction();
+            }
+            function touch(){
+                if(pressed > 0){
+                    pressed--;
+                    if(touchleft)
+                        player.turnLeft();
+                    else if(touchup)
+                        player.moveForward();
+                    else if(touchdown)
+                        player.moveBackward();
+                    else if(touchright)
+                        player.turnRight();  
+                }
+                else{
+                    touchdown = 0;
+                    touchleft = 0;
+                    touchright = 0;
+                    touchup = 0;
+                }
+            }
+            //keyboard stuff
+            var keys = {
+                up: false,
+                down: false,
+                left: false,
+                right: false,
+                space: false
+            };
+            function keyboardStuff(){
+                document.addEventListener('keydown', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = true;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = true;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = true;
+
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = true;
+                    }
+                    else if(event.keyCode == 17) {
+                        keys.ctrl = true;
+                    }
+                });
+                document.addEventListener('keyup', function(event) {
+                    if(event.keyCode == 32) {
+                        keys.space = false;
+                    }
+                    if(event.keyCode == 37) {
+                        keys.left = false;
+                    }
+                    else if(event.keyCode == 39) {
+                        keys.right = false;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                    }
+                    else if(event.keyCode == 40) {
+                        keys.down = false;
+                    } 
+                    else if(event.keyCode == 17) {
+                        keys.ctrl = false;
+                    } 
+                });
+            }
+            function map(){
+                //initialize map array
+                mapWall = new Array();
+                wallArray = new Array();
+                itemArray = new Array();
+
+                mapArray = new Array(mapSize);
+                itemMapArray = new Array(mapSize);
+
+                for(var i = 0; i < mapSize; i++){
+                    mapArray[i] = new Array(mapSize);
+                    itemMapArray[i] = new Array(mapSize);
+                    for(var j = 0; j < mapSize; j++){
+                        itemMapArray[i][j] = 0;
+                        mapArray[i][j] = 0;
+                    }
+                }
+
+                //surround the map with walls
+                for(var i  = 0; i < (mapSize - (thinWallThickness * 2)) / textureLength; i ++){
+                    wallArray.push(new Wall(0, thinWallThickness + (textureLength * i), 0, 0)); //top
+                    wallArray.push(new Wall(0, thinWallThickness + (textureLength * i), mapSize - thinWallThickness, 1)); //bottom
+                    wallArray.push(new Wall(1, 0, thinWallThickness + (textureLength * i), 2)); //left
+                    wallArray.push(new Wall(1, mapSize - thinWallThickness, thinWallThickness + (textureLength * i), 3)); //right
+                }
+                //draw walls and stuff on the map
+                //make wolf3d first section texture size = 10
+                //first room
+                makeHorizontalWallSection(800, 0, 10, 0);
+                makeVerticalWallSection(810, 0, 10, 0);
+                makeVerticalWallSection(890, 0, 10, 0);
+                makeVerticalWallSection(800, 0, 10, 0);
+                makeVerticalWallSection(900, 0, 10, 0);
+
+                makeHorizontalWallSection(800, 100, 5, 0);
+                makeHorizontalWallSection(800, 90, 5, 0);
+                makeHorizontalWallSection(860, 100, 4, 0);
+                makeHorizontalWallSection(860, 90, 4, 0);
+
+                makeVerticalWallSection(860, 90, 1, 0);
+                makeVerticalWallSection(850, 90, 1, 0);
+
+                //first hallway
+                makeHorizontalWallSection(700, 100, 10, 1);
+                makeVerticalWallSection(700, 100, 4, 1);
+                makeVerticalWallSection(710, 100, 4, 1);
+                makeHorizontalWallSection(700, 140, 1, 1);
+                makeHorizontalWallSection(700, 160, 1, 1);
+                makeVerticalWallSection(700, 160, 4, 1);
+                makeVerticalWallSection(710, 160, 4, 1);
+                makeHorizontalWallSection(700, 200, 10, 1);
+                
+                makeHorizontalWallSection(860, 200, 4, 2);
+                makeVerticalWallSection(900, 200, 10, 2);
+                makeHorizontalWallSection(900, 300, 11, 2);
+                //second room
+                makeHorizontalWallSection(800, 200, 5, 3);
+                makeHorizontalWallSection(800, 210, 5, 3);
+                makeVerticalWallSection(850, 200, 1, 3);
+                makeVerticalWallSection(860, 200, 1, 3);
+                makeVerticalWallSection(860, 200, 1, 3);
+                makeHorizontalWallSection(860, 210, 4, 3);
+                makeVerticalWallSection(800, 200, 10, 3);
+                makeVerticalWallSection(810, 200, 10, 3);
+                makeVerticalWallSection(890, 200, 10, 3);
+                makeHorizontalWallSection(800, 290, 10, 3);
+                makeHorizontalWallSection(800, 300, 10, 3);
+                //long hall way
+                makeVerticalWallSection(600, 0, 110, 0);
+                makeVerticalWallSection(700, 200, 100, 0);
+
+                //doors single and should be afterwalls
+
+                var gate1 = new Wall(2, 850 , 205, 20);
+                wallArray.push(gate1);
+                gateArray.push(gate1);
+
+                var gate2 = new Wall(2, 850 , 95, 20);
+                wallArray.push(gate2);
+                gateArray.push(gate2);
+
+                //put items Item(itemType, x, y, z, height, width)
+                //fan in room1
+                itemArray.push(new Item(13, 855, 150 , heightPixels / 2 , 1000  , 1000 ));
+                //table in room1
+                itemArray.push(new Item(5, 820, 85 , heightPixels / 2 , 1000 , 1000));
+                //fishtank in room2
+                itemArray.push(new Item(6, 885, 75 , heightPixels / 2 , 1000 , 1000));
+                //torches in room1
+                itemArray.push(new Item(0, 845, 90 , heightPixels / 2 , 400 , 400));
+                itemArray.push(new Item(0, 865, 90 , heightPixels / 2 , 400 , 400));
+                //torches in hallway
+                itemArray.push(new Item(0, 845, 100 , heightPixels / 2 , 400 , 400));
+                itemArray.push(new Item(0, 865, 100 , heightPixels / 2 , 400 , 400));
+                
+                itemArray.push(new Item(0, 845, 200 , heightPixels / 2 , 400 , 400));
+                itemArray.push(new Item(0, 865, 200 , heightPixels / 2 , 400 , 400));
+                //all items in hallway 
+                itemArray.push(new Item(0, 1000, 97 , heightPixels / 2 , 400 , 400));
+                itemArray.push(new Item(2, 1000, 107 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(3, 1000, 117 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(4, 1000, 127 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(5, 1000, 137 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(6, 1000, 147 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(13, 1000, 157 , heightPixels / 2 , 1000 , 1000));
+                //fish in room2
+                itemArray.push(new Item(6, 855, 280 , heightPixels / 2 , 1000 , 1000));
+                //table in room2
+                itemArray.push(new Item(5, 820, 270 , heightPixels / 2 , 1000 , 1000));
+                //torches in room2 
+                itemArray.push(new Item(0, 845, 210 , heightPixels / 2 , 400 , 400));
+                itemArray.push(new Item(0, 865, 210 , heightPixels / 2 , 400 , 400));
+                //torches in the long hallway
+                for(var i = 0; i < 97; i++)
+                    itemArray.push(new Item(0, 600, 25 + (i * 10) , heightPixels / 2 , 400 , 400));
+                for(var i = 0; i < 84; i++)
+                    itemArray.push(new Item(0, 700, 165 + (i * 10) , heightPixels / 2 , 400 , 400));
+                //fan in long hallway
+                itemArray.push(new Item(13, 630, 45 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(13, 660, 45 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(13, 690, 45 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(13, 720, 45 , heightPixels / 2 , 1000 , 1000));
+                //fish tank in long hallway
+                itemArray.push(new Item(6, 750, 45 , heightPixels / 2 , 1000 , 1000));
+                //poster in room1
+                itemArray.push(new Item(2, 810, 50 , heightPixels / 2 , 1000 , 1000));
+                //plant in hallway
+                itemArray.push(new Item(3, 720, 137 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(3, 720, 165 , heightPixels / 2 , 1000 , 1000));
+
+                itemArray.push(new Item(3, 1005, 290 , heightPixels / 2 , 1000 , 1000));
+                itemArray.push(new Item(3, 905, 290 , heightPixels / 2 , 1000 , 1000));
+                //teleporters at the end
+                for(var j = 1; j < 10; j++){
+                    for(var i = 0; i < 10; i++){
+                        itemArray.push(new Item(4, 600 + j * 10, 720  + i * 10 , heightPixels / 2 , 1000 , 1000));
+                    }
+                }
+                    
+                //flex other games :p
+                itemArray.push(new Item(15, 900, 3 , heightPixels / 2 , 1000 , 1000));
+                for(var i = 1; i < 10; i++)
+                    itemArray.push(new Item(15 + i, 900 + i * 10, 3 , heightPixels / 2 , 700 , 1000));
+            
+                //enemies
+                tempItem = new Item(28, 830, 155 , heightPixels / 2 , 1000 , 1000)
+                itemArray.push(tempItem);
+                enemyArray.push(tempItem);
+
+                //pickups
+                tempItem = new Item(25, 920, 250, heightPixels / 2 , 700 , 1000)
+                itemArray.push(tempItem);
+                pickupArray.push(tempItem);
+                tempItem = new Item(26, 950, 200, heightPixels / 2 , 700 , 1000)
+                itemArray.push(tempItem);
+                pickupArray.push(tempItem);
+                
+
+            }
+            
+            function makeHorizontalWallSection(x, y, number, texture){
+                for(var i = 0; i < number; i++){
+                    if((x + textureLength * i) < mapSize)
+                        wallArray.push(new Wall(0, x + (i * textureLength), y, texture));
+                }
+            }
+            function makeVerticalWallSection(x, y, number, texture){
+                for(var i = 0; i < number; i++){
+                    if((y + textureLength * i) < mapSize)
+                        wallArray.push(new Wall(1, x, y + (i * textureLength), texture));
+                }
+            }
+            function initializeCanvas(){
+                //draw map for testing
+                testCanvas = document.getElementById("testScreen");
+                testContext = testCanvas.getContext("2d");
+                testCanvas.style.height = testCanvas.style.width = mapSize + "px";
+                testCanvas.width = testCanvas.clientWidth;
+                testCanvas.height = testCanvas.clientHeight;
+                gameCanvas = document.getElementById("gameScreen");
+                gameContext = gameCanvas.getContext("2d");
+                textureCanvas = document.getElementById("textureScreen");
+                textureContext = textureCanvas.getContext("2d");
+                scaleForScreen = gameCanvas.height / 960;
+            }
+            function drawPlayer(x, y){
+                testContext.fillStyle = "black";
+                testContext.fillRect(x, y, 1, 1);
+            }   
+            function drawMap(){
+                testContext.clearRect(0, 0, testCanvas.width, testCanvas.height);
+                
+                for(var i = 0; i < mapSize; i ++){
+                    for(var j = 0; j < mapSize; j ++){
+                        if(mapArray[j][i] > 0){
+                            var wallPosition = 0;
+                            //traverse mapWall to find id of wall
+                            for(var k = 0; k < mapWall.length; k++){
+                                if(mapWall[k] > mapArray[j][i]){
+                                    wallPosition = k;
+                                    break;
+                                }
+                            }
+                            //draw the assigned texture
+                            if(wallArray[wallPosition].textureType == 0){
+                                testContext.fillStyle = "brown";
+                                testContext.fillRect(i, j, 1, 1);
+                            }
+                            else if(wallArray[wallPosition].textureType == 1){
+                                testContext.fillStyle = "yellow";
+                                testContext.fillRect(i, j, 1, 1);
+                            }
+                            else if(wallArray[wallPosition].textureType == 2){
+                                testContext.fillStyle = "green";
+                                testContext.fillRect(i, j, 1, 1);
+                            }
+                            else if(wallArray[wallPosition].textureType == 3){
+                                testContext.fillStyle = "blue";
+                                testContext.fillRect(i, j, 1, 1);
+                            }
+                            else if(wallArray[wallPosition].textureType == 20){
+                                testContext.fillStyle = "red";
+                                testContext.fillRect(i, j, 1, 1);
+                            }
+                        }
+                    }  
+                }
+            }
+            function fillWall(i){
+                if(i == 0){
+                    gameContext.fillStyle = "#F0FFFF";
+                }
+                else if(i == 1){
+                    gameContext.fillStyle = "#FF7F50";
+                }
+                else if(i == 2){
+                    gameContext.fillStyle = "#556B2F";
+                }
+                else if(i == 3){
+                    gameContext.fillStyle = "#8FBC8F";
+                }
+                else if(i == 20){
+                    gameContext.fillStyle = "red";
+                }
+                gameContext.fill();
+            }
+            
+            function drawTexture(prevLine, currentLine){
+                var texturePercentage = 0;
+                var displayedLength = 0;
+                var fullLength = 0;
+                var xStart = 0;
+                var xEnd = 0;
+                var yStart1 = 0;
+                var yStart2 = 0;
+                var yEnd1 = 0;
+                var yEnd2 = 0;
+                var toBeRendered = 0;
+                //calculate fraction of the texture which is displayed
+                texturePercentage = (Math.abs(prevLine.mapId - currentLine.mapId) + 1) / textureLength;
+                //displayed texture length
+                displayedLength = Math.abs(currentLine.x - prevLine.x);
+                //full length of the texture
+                fullLength = displayedLength / texturePercentage;
+                //calculate the positions to render the texture
+                
+                if(prevLine.mapId > currentLine.mapId){ //left higher right lower
+                    var whichEdgeVisible = 0; //0  == nothing 1 == only right 2 == only left 3 == both 
+                    //check if the right edge of texture is visible
+                    if((currentLine.mapId - 1) % textureLength == 0){
+                        whichEdgeVisible = 1;
+                        xEnd = currentLine.x;
+                        yEnd1 = currentLine.y1;
+                        yEnd2 = currentLine.y2;
+                    }
+                    //check if the left edge of texture is visible
+                    if(prevLine.mapId % textureLength == 0){
+                        if(whichEdgeVisible == 1)
+                            whichEdgeVisible = 3;
+                        else
+                            whichEdgeVisible = 2;
+                        xStart = prevLine.x;
+                        yStart1 = prevLine.y1;
+                        yStart2 = prevLine.y2;
+                    }
+                    if(whichEdgeVisible == 3){ //both edges visible so just draw the texture without resizing
+                        //nothing to do, all the required values are assigned
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("3");
+                       
+
+                    }
+                    else if(whichEdgeVisible == 2){ //only left edge visible so extrapolate position of the the right edge off screen
+                        //var fractionOfVisible = (prevLine.mapId - currentLine.mapId) / textureLength; //size which is visible currently
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("2");
+                        xEnd = xStart + fullLength;
+                        //for yEnd1 get tantheta of the displayed and calculate ( h1 height of difference between prevLine and currentLine y1, h2 the difference in extrapolated)
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        var x1 = currentLine.x - prevLine.x;
+                        var x2 = fullLength;
+                        var h2 = h1 * x2 / x1;
+                        yEnd2 = prevLine.y2 + h2;
+                        yEnd1 = prevLine.y1 - h2;
+                        //console.log(yEnd1 + " " + currentLine.y1);
+                        //console.log(yEnd2 + " " + currentLine.y2);
+                    }
+                    else if(whichEdgeVisible == 1){ //only right edge visible so extrapolate position of the the left edge off screen
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("1");
+                        xStart = xEnd - fullLength;
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        var x1 = currentLine.x - prevLine.x;
+                        var x2 = fullLength;
+                        var h2 = h1 * x2 / x1;
+                        yStart2 = currentLine.y2 - h2;
+                        yStart1 = currentLine.y1 + h2;
+                        //console.log(yStart1 + " " + prevLine.y1);
+                        //console.log(yStart2 + " " + prevLine.y2);
+                    }
+                    else{//no edge visible, resize the texture to display only the percentage according to mapId visible
+                        //have to assign all the values
+                        //check which mapids are available
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("0");
+                        //first calculate values on the right from currentLine
+                        var rightPercentage = (currentLine.mapId % textureLength) / textureLength; // maybe add +1 if it doesnt work correctly ;P
+                        var fullLengthToRight = rightPercentage * fullLength;
+                        xEnd = currentLine.x + fullLengthToRight;
+                        var leftPercentage = (textureLength - (prevLine.mapId % textureLength)) / textureLength;
+                        var fullLengthToLeft = leftPercentage * fullLength;
+                        xStart = prevLine.x - fullLengthToLeft;
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        //x1 == length to the left x2 == length between x3 == length to the right
+                        var x1 = fullLengthToLeft;
+                        var x2 = currentLine.x - prevLine.x;
+                        var x3 = fullLengthToRight;
+                        //h2 height difference betweem prevline.y1 and yEnd1
+                        var h2 = h1 * (x2 + x3) / x2;
+                        yEnd1 = prevLine.y1 - h2;
+                        yEnd2 = prevLine.y2 + h2;
+                        //h3 height difference between currentLine.y1 and yEnd2
+                        var h3 = h1 * (x2 + x1) / x2;
+                        yStart1 = currentLine.y1 + h3;
+                        yStart2 = currentLine.y2 - h3;
+                        //console.log(yStart1 + " " + yEnd1);
+                        //console.log(yStart2 + " " + prevLine.y2);
+
+                    }
+                }
+                else if(prevLine.mapId < currentLine.mapId){ //left lower right higher
+                    var whichEdgeVisible = 0; //0  == nothing 1 == only right 2 == only left 3 == both 
+                    //check if the right edge of texture is visible
+                    if(currentLine.mapId % textureLength == 0){
+                        whichEdgeVisible = 1;
+                        
+                        xEnd = currentLine.x;
+                        yEnd1 = currentLine.y1;
+                        yEnd2 = currentLine.y2;
+                    }
+                    //check if the left edge of texture is visible
+                    if((prevLine.mapId - 1) % textureLength == 0){
+                        if(whichEdgeVisible == 1)
+                            whichEdgeVisible = 3;
+                        else
+                            whichEdgeVisible = 2;
+                        xStart = prevLine.x;
+                        yStart1 = prevLine.y1;
+                        yStart2 = prevLine.y2;
+                    }
+                    
+                    if(whichEdgeVisible == 3){ //both edges visible so just draw the texture without resizing
+                        //nothing to do, all the required values are assigned
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("3");
+                       
+
+                    }
+                    else if(whichEdgeVisible == 2){ //only left edge visible so extrapolate position of the the right edge off screen
+                        //var fractionOfVisible = (prevLine.mapId - currentLine.mapId) / textureLength; //size which is visible currently
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("2");
+                        xEnd = xStart + fullLength;
+                        //for yEnd1 get tantheta of the displayed and calculate ( h1 height of difference between prevLine and currentLine y1, h2 the difference in extrapolated)
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        var x1 = currentLine.x - prevLine.x;
+                        var x2 = fullLength;
+                        var h2 = h1 * x2 / x1;
+                        yEnd2 = prevLine.y2 + h2;
+                        yEnd1 = prevLine.y1 - h2;
+                        //console.log(yEnd1 + " " + currentLine.y1);
+                        //console.log(yEnd2 + " " + currentLine.y2);
+                    }
+                    else if(whichEdgeVisible == 1){ //only right edge visible so extrapolate position of the the left edge off screen
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("1");
+                        xStart = xEnd - fullLength;
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        var x1 = currentLine.x - prevLine.x;
+                        var x2 = fullLength;
+                        var h2 = h1 * x2 / x1;
+                        yStart2 = currentLine.y2 - h2;
+                        yStart1 = currentLine.y1 + h2;
+                        //console.log(yStart1 + " " + prevLine.y1);
+                        //console.log(yStart2 + " " + prevLine.y2);
+                    }
+                    else{//no edge visible, resize the texture to display only the percentage according to mapId visible
+                        //have to assign all the values
+                        //check which mapids are available
+                        //console.log(texturePercentage);
+                        //console.log(displayedLength + "dis<   full>" + fullLength);
+                        //console.log("0");
+                        //first calculate values on the right from currentLine
+                        var rightPercentage = (textureLength - (currentLine.mapId % textureLength)) / textureLength; // maybe add +1 if it doesnt work correctly ;P
+                        var fullLengthToRight = rightPercentage * fullLength;
+                        xEnd = currentLine.x + fullLengthToRight;
+                        var leftPercentage = (prevLine.mapId % textureLength) / textureLength;
+                        var fullLengthToLeft = leftPercentage * fullLength;
+                        xStart = prevLine.x - fullLengthToLeft;
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        //x1 == length to the left x2 == length between x3 == length to the right
+                        var x1 = fullLengthToLeft;
+                        var x2 = currentLine.x - prevLine.x;
+                        var x3 = fullLengthToRight;
+                        //h2 height difference betweem prevline.y1 and yEnd1
+                        var h2 = h1 * (x2 + x3) / x2;
+                        yEnd1 = prevLine.y1 - h2;
+                        yEnd2 = prevLine.y2 + h2;
+                        //h3 height difference between currentLine.y1 and yEnd2
+                        var h3 = h1 * (x2 + x1) / x2;
+                        yStart1 = currentLine.y1 + h3;
+                        yStart2 = currentLine.y2 - h3;
+                        //console.log(yStart1 + " " + yEnd1);
+                        //console.log(yStart2 + " " + prevLine.y2);
+
+                    }
+                }
+                else{ //both same mapId
+                //check if an edge is found, if not do not do anything, two edges impossible in one mapId
+                //check for right edge
+                    var rightEdge = 0; //1 if texture max 2 if texture min
+                    if(currentLine.mapId % textureLength) //when right is higher
+                        rightEdge = 2;
+                    else if((currentLine.mapId - 1) % textureLength) //when right is lower
+                        rightEdge = 1;
+                    var leftEdge = 0; //1 if texture max 2 if texture min
+                    if(prevLine.mapId % textureLength) //when left is higher
+                        leftEdge = 2;
+                    else if((prevLine.mapId - 1) % textureLength) //when left is lower
+                        leftEdge = 1;
+                    if(rightEdge > 0){
+                        xEnd = currentLine.x;
+                        xStart = currentLine.x - fullLength;
+                        yEnd1 = currentLine.y1;
+                        yEnd2 = currentLine.y2;
+                        var x1 = currentLine.x - prevLine.x;
+                        var x2 = fullLength;
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        var h2 = h1 * x2 / x1;
+                        yStart1 = currentLine.y1 + h2;
+                        yStart2 = currentLine.y2 - h2;
+                    }
+                    else if(leftEdge > 0){
+                        xStart = prevLine.x;
+                        xEnd = prevLine.x + fullLength;
+                        yStart1 = prevLine.y1;
+                        yStart2 = prevLine.y2;
+                        var x1 = currentLine.x - prevLine.x;
+                        var x2 = fullLength;
+                        var h1 = ((currentLine.y2 - currentLine.y1) - (prevLine.y2 - prevLine.y1)) / 2;
+                        var h2 = h1 * x2 / x1;
+                        yEnd1 = prevLine.y1 - h2;
+                        yEnd2 = prevLine.y2 + h2;
+                    }
+                    //console.log("sameID");
+                }
+                //clear the texture canvas
+                textureContext.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
+                //draw lines on second screen to test
+                
+                // textureContext.beginPath();
+                // textureContext.moveTo(xStart, yStart1);
+                // textureContext.lineTo(xStart, yStart2);
+                // textureContext.lineTo(xEnd, yEnd2);
+                // textureContext.lineTo(xEnd, yEnd1);
+                // textureContext.closePath();
+                // textureContext.stroke();
+                
+                //make a call to the distort image function
+                
+                textureInput(xStart, xEnd, yStart1, yEnd1, yEnd2, yStart2, currentLine.texture);
+                //clear left and right of the texture
+                textureContext.clearRect(0, 0, prevLine.x, heightPixels);
+                textureContext.clearRect(currentLine.x + textureMappingCorrection, 0, widthPixels, heightPixels); //+6 to reduce the spaces
+                //copy the texture to the gameCanvas
+                gameContext.drawImage(textureCanvas, 0 , 0);
+
+            }
+            function drawGun(){
+                if(player.hasGun == 1){
+                    if(shootAnimation > 0){
+                        //console.log("shoot");
+                        gameContext.drawImage(gunShoot, (widthPixels / 2), (heightPixels - widthPixels / 8) , widthPixels / 8, widthPixels / 8);
+                        shootAnimation--;
+                    }
+                        
+                    else
+                        gameContext.drawImage(gun, (widthPixels / 2), (heightPixels - widthPixels / 8) , widthPixels / 8, widthPixels / 8);
+                }
+            }
+            function drawGameScreen(){
+                var debugCheck = 0;
+                var prevPoint = 0;
+                var percent;
+                var fullView = Math.atan(wallHeight / fullViewDistance);
+                var fullViewItem = Math.atan(itemHeight / fullViewDistance);
+                
+                
+                //draw background
+                //background ground
+                
+                var grd = gameContext.createLinearGradient(0, 500, 0, 000);
+                grd.addColorStop(0, "grey");
+                grd.addColorStop(1, "white");
+                gameContext.fillStyle = grd;
+                gameContext.fillRect(0, 480, gameCanvas.width, gameCanvas.height / 2);
+
+                // background sky
+                grd = gameContext.createLinearGradient(0, 0, 0, 240);
+                grd.addColorStop(0, "skyblue");
+                grd.addColorStop(1, "white");
+                gameContext.fillStyle = grd;
+                gameContext.fillRect(0, 0, gameCanvas.width, gameCanvas.height / 2);
+
+                //fill the screenArray for the wall
+                for(var i = 0; i < widthPixels; i ++){
+
+                    //wall
+                    percent = Math.atan(wallHeight / wallDistArray[i]) / fullView;
+                    screenArray[i].mapId = mapIDArray[i];
+                    screenArray[i].x = i;
+                    screenArray[i].y1 = (1 - percent) * (heightPixels / 2);
+                    screenArray[i].y2 = (1 - percent) * (heightPixels / 2) + (percent * heightPixels);
+                    screenArray[i].findMyId();
+                }
+                //lines with id 1, then lines with id 2 fill the itemScreenArray
+                for(var k = 1; k < itemMapID; k++){
+                    var tempDistance = 0;
+                    var tempPosition = 0;
+                    var tempType = 0;
+                    var tempZ = 0;
+                    var tempHeight = 0;
+                    var tempWidth = 0;
+                    var skip = 0;
+                    var shotAt = 0;
+                    for(var i = 0; i < widthPixels; i++){
+                        for(var j = 0; j < itemDistArray[i].length; j++){
+
+                            //if item is shot at
+                            if(Math.abs((widthPixels / 2) - i) < widthPixels/16){
+                                if(itemMapIDArray[i][j] == k){
+                                    if(player.shoot == 1 && player.hasGun == 1){
+                                        shotAt = 1;
+                                    }
+                                }
+                            }   
+                            if(itemMapIDArray[i][j] == k){
+                                tempPosition = i;
+                                tempDistance = itemDistArray[i][j];
+                                tempType = itemArray[k - 1].itemType;
+                                //if the enemy shoots
+                                if(itemArray[k - 1].shoot == 1){
+                                    if(tempType == 28){
+                                        itemArray[k - 1].itemType = 29;
+                                    }
+                                    else if(tempType == 30){
+                                        itemArray[k - 1].itemType = 31;
+                                    }
+                                    player.health--;
+                                }
+                                else if(itemArray[k - 1].shoot == 0){
+                                    if(tempType == 29){
+                                            itemArray[k - 1].itemType = 28;
+                                    }
+                                    else if(tempType == 31){
+                                        itemArray[k - 1].itemType = 31;
+                                    }
+                                }
+                                //if item is shot turn into ash if not enemy
+                                if(shotAt == 1){
+                                    if(tempType > 27){
+                                        if(tempType == 28 || tempType == 29){
+                                            itemArray[k - 1].itemType = 30;
+                                        }
+
+                                        else if(tempType == 30 || tempType == 31){
+                                            itemArray[k - 1].itemType = 32;
+                                            itemArray[k - 1].dead = 1;
+                                        }
+                                    }
+                                    else{
+                                        itemArray[k - 1].itemType = 27;
+                                    }
+                                    shotAt = 0;
+                                    
+                                }
+                                //animated stuff which is to be destroyed
+                                else{
+                                    //fish bowl animation
+                                    if(tempType == 6)
+                                        itemArray[k - 1].itemType = 7;
+                                    else if(tempType == 7)
+                                        itemArray[k - 1].itemType = 8;
+                                    else if(tempType == 8)
+                                        itemArray[k - 1].itemType = 9;
+                                    else if(tempType == 9)
+                                        itemArray[k - 1].itemType = 10;
+                                    else if(tempType == 10)
+                                        itemArray[k - 1].itemType = 11;
+                                    else if(tempType == 11)
+                                        itemArray[k - 1].itemType = 12;
+                                    else if(tempType == 12)
+                                        itemArray[k - 1].itemType = 6;
+                                    
+                                }
+                                //indestructable items
+                                //torch animation
+                                if(tempType == 1)
+                                    itemArray[k - 1].itemType = 0;
+                                else if(tempType == 0)
+                                    itemArray[k - 1].itemType = 1;
+                                //fan animation
+                                if(tempType == 13)
+                                    itemArray[k - 1].itemType = 14;
+                                else if(tempType == 14)
+                                    itemArray[k - 1].itemType = 13;
+                                
+                                tempZ = itemArray[k - 1].z;
+                                tempHeight = itemArray[k - 1].height;
+                                tempWidth = itemArray[k - 1].width;
+                                skip = 1;
+                                break;
+                            }
+                        }
+                        if(skip == 1)
+                            break;
+                    }
+                    if(tempDistance > 0 && tempPosition > 0){
+                        percent = Math.atan(itemHeight / tempDistance / fullView);
+                        //hanging items and wall items 
+                        itemScreenArray[tempPosition].addItem(tempType, tempPosition, (1 - percent) * tempZ, tempHeight * percent, tempWidth * percent);
+                        
+                    }
+                }
+                
+                gameContext.fillStyle = "black";
+                //draw walls
+                gameContext.beginPath();
+                gameContext.moveTo(screenArray[0].x, screenArray[0].y1);
+                gameContext.lineTo(screenArray[0].x, screenArray[0].y2);
+                prevPoint = 0;
+                //for rest of vertical lines
+                for(var i = 1; i < widthPixels - 1; i++){
+                    //find out connecting walls and draw lines
+                    if(screenArray[i - 1].wallId == screenArray[i].wallId){
+                        screenArray[i].start = 0;
+                    }
+                    else{
+                        //finish old wall
+                        gameContext.lineTo(screenArray[i - 1].x, screenArray[i - 1].y2);
+                        gameContext.lineTo(screenArray[i - 1].x, screenArray[i - 1].y1);
+                        gameContext.lineTo(screenArray[prevPoint].x, screenArray[prevPoint].y1);
+                        gameContext.closePath();
+                        //draw the texture on second screen
+                        drawTexture(screenArray[prevPoint], screenArray[i - 1]);
+
+                        
+                        gameContext.stroke();
+                        //fillWall(screenArray[i - 1].texture);
+                        //start new wall
+                        gameContext.beginPath();
+                        gameContext.moveTo(screenArray[i].x, screenArray[i].y1);
+                        gameContext.lineTo(screenArray[i].x, screenArray[i].y2);
+                        prevPoint = i;
+                    }
+                }
+                //for the last vertical line
+                gameContext.lineTo(screenArray[widthPixels - 1].x, screenArray[widthPixels - 1].y2);
+                gameContext.lineTo(screenArray[widthPixels - 1].x, screenArray[widthPixels - 1].y1);
+                gameContext.lineTo(screenArray[prevPoint].x, screenArray[prevPoint].y1);
+                gameContext.closePath();
+                gameContext.stroke();
+                //draw the last texture
+                drawTexture(screenArray[prevPoint], screenArray[widthPixels - 1]);
+                //fillWall(screenArray[widthPixels - 1].texture);
+                
+
+                //draw items
+                for(var i = 0; i < widthPixels; i++){ //check if multiple items of same id present if so find mid point
+                    var tempItem = itemScreenArray[i];
+                    for(var j = tempItem.itemListY.length - 1; j >= 0; j--)
+                        gameContext.drawImage(asset[tempItem.itemList[j]], i, tempItem.itemListY[j] , tempItem.itemListHeight[j], tempItem.itemListWidth[j]);
+                }
+                //draw weapons if available
+                drawGun();
+                //display the health
+                gameContext.font = (widthPixels / 32) + "px Georgia";
+                gameContext.fillText(player.health, widthPixels - widthPixels / 16, heightPixels / 16);
+                //clear arrays
+                for(var i = 0; i < widthPixels; i++){
+                    var tempID = itemMapIDArray[i][0];
+                    if(tempID > 0){
+                        itemScreenArray[i] = new ItemScreen(1);
+                        itemMapIDArray[i] = new Array();
+                        itemDistArray[i] = new Array();
+                    }
+                }
+            }
+
+            function calculateView(){ //cpu intensive clean up as much as possible
+                var beta = (viewAngle / 2) / widthPixels; //angle difference between two points
+                var tempX;
+                var tempY;
+                var tempItemID = 0;
+                var tempWallID = 0;
+                var minDistance = maxDistance;
+                var minItemDistance = new Array();
+                var minItemID = new Array();
+                var minWallID = 0;
+                var insertion = 0;
+                //traverse anti-clockwise from 0 to -viewAngle / 2 
+                for(var i = 0; i < widthPixels / 2; i++){
+                    insertion = (widthPixels / 2) - (i + 1);
+                    for(var j = 0; j < numOfPoints; j++){
+                    
+                        tempX = -j * viewRadius * Math.sin((player.angle - (i * beta)) * Math.PI / 180);
+                        tempX = Math.floor(player.positionX - tempX);
+
+                        tempY = j * viewRadius * Math.cos((player.angle - (i * beta)) * Math.PI / 180);
+                        tempY = Math.floor(player.positionY - tempY);
+
+                        tempItemID = itemMapArray[tempY][tempX];
+                        tempWallID = mapArray[tempY][tempX];
+
+                        if(tempItemID > 0){
+                            minItemDistance.push(j);
+                            minItemID.push(tempItemID);
+                        }
+                        if(tempWallID > 0){
+                            minDistance = j;
+                            minWallID = tempWallID;
+                            break;
+                        }
+
+                    }
+                    itemDistArray[insertion] = minItemDistance;
+                    itemMapIDArray[insertion] = minItemID;
+                    wallDistArray[insertion] = minDistance;
+                    mapIDArray[insertion] = minWallID;
+                    minDistance = maxDistance;
+                    minWallID = 0;
+                    minItemDistance = new Array();
+                    minItemID = new Array();
+                }
+                //traverse clockwise from 0 to +viewAngle / 2
+                for(var i = 0; i < widthPixels / 2; i++){
+                    insertion = (widthPixels / 2) + i;
+                    for(var j = 0; j < numOfPoints; j++){
+
+                        tempX = -j * viewRadius * Math.sin((player.angle - (-i * beta)) * Math.PI / 180);
+                        tempX = Math.floor(player.positionX - tempX);
+
+                        tempY = j * viewRadius * Math.cos((player.angle - (-i * beta)) * Math.PI / 180);
+                        tempY = Math.floor(player.positionY - tempY);
+
+
+                        tempItemID = itemMapArray[tempY][tempX];
+                        tempWallID = mapArray[tempY][tempX];
+                        if(tempItemID > 0){
+                            minItemDistance.push(j);
+                            minItemID.push(tempItemID);
+                        }
+                        if(tempWallID > 0){
+                            minDistance = j;
+                            minWallID = tempWallID;
+                            break;
+                        }
+                    }
+                    itemDistArray[insertion] = minItemDistance;
+                    itemMapIDArray[insertion] = minItemID;
+                    wallDistArray[insertion] = minDistance;
+                    mapIDArray[insertion] = minWallID;
+                    minDistance = maxDistance;
+                    minWallID = 0;
+                    minItemDistance = new Array();
+                    minItemID = new Array();
+                }
+                //console.log("Angle " + player.angle + " Distance" + wallDistArray[(widthPixels / 2)]);
+            }
+            function drawProcess(){
+                calculateView();
+                drawGameScreen();
+            }
+            //gate opening logic
+            function searchGateClosest(){
+                for(var i = 0; i < gateArray.length; i++){
+                    var inXRange = 0;
+                    var inYRange = 0;
+                    if((gateArray[i].rangeForGateX[0] < player.positionX) && (gateArray[i].rangeForGateX[1] > player.positionX))
+                        inXRange = 1;
+                    if((gateArray[i].rangeForGateY[0] < player.positionY) && (gateArray[i].rangeForGateY[1] > player.positionY))
+                        inYRange = 1;
+                    if(inXRange && inYRange){
+                        gateToBeOpened = i;
+                    }
+                }
+            }
+            function openGateCommand(){
+                searchGateClosest();
+                if(gateOpening == 0){
+                    gateOpenTimer = gateOpenMaxTime;
+                    gateOpening = 1;
+                    timeOut = timeOutMaxTime;
+                }
+            }
+            function openGate(){
+                var proceed = 0;
+                if(gateOpenTimer > 1)
+                    proceed = 1;
+                else
+                    proceed = 0;
+                if(proceed){
+                    var tempGate = gateArray[gateToBeOpened];
+                    var tempStorage = new Array(textureLength);
+                    if(tempGate.wallType == 2){
+                        for(var i = 0; i < textureLength; i++){
+                            tempStorage[i] = mapArray[tempGate.y][tempGate.x + i];
+                            mapArray[tempGate.y][tempGate.x + i] = 0; 
+                        }
+                        tempGate.x = tempGate.x + 1;
+                        for(var i = 0; i < textureLength; i++){
+                            mapArray[tempGate.y][tempGate.x + i] = tempStorage[i]; 
+                        }
+                        gateOpenTimer--;
+                    }
+                    else if(tempGate.wallType == 3){
+                        for(var i = 0; i < textureLength; i++){
+                            tempStorage[i] = mapArray[tempGate.y][tempGate.y + i];
+                            mapArray[tempGate.y + i][tempGate.x] = 0; 
+                        }
+                        tempGate.y = tempGate.y + 1;
+                        for(var i = 0; i < textureLength; i++){
+                            mapArray[tempGate.y + i][tempGate.x] = tempStorage[i]; 
+                        }
+                        gateOpenTimer--;
+                    }
+                }
+                if(gateOpenTimer == 1){
+                    gateOpening = 0;
+                    gateOpenTimer = 0;
+                }
+                //timeout if no gate to close
+                if(timeOut > 0){
+                    timeOut--;
+                }
+                else if(timeOut == 0 && gateOpenTimer == gateOpenMaxTime){
+                    gateOpening = 0;
+                    gateOpenTimer = 0;
+                }
+            }
+            function pickupCheck(){
+                //check if an item is close by, and remove if it is
+                for(var i = 0; i < pickupArray.length; i++){
+                    var closeBy = 0;
+                    if(Math.abs(pickupArray[i].x - player.positionX) < 3)
+                        closeBy++;
+                    if(Math.abs(pickupArray[i].y - player.positionY) < 3)
+                        closeBy++;
+                    if(closeBy == 2){
+                        //check if needs to be picked up
+                        //check health
+                        if(player.health < 100 && pickupArray[i].itemType == 26){
+                            player.health = player.health + 25;
+                            itemMapArray[pickupArray[i].y][pickupArray[i].x] = 0
+                            pickupArray.splice(i, 1);
+                        }
+                        //check gun
+                        if(player.hasGun == 0 && pickupArray[i].itemType == 25){
+                            player.hasGun = 1;
+                            itemMapArray[pickupArray[i].y][pickupArray[i].x] = 0
+                            pickupArray.splice(i, 1);
+                        }
+                    }
+                }
+            }
+            function shootFunction(){
+                player.shoot = 1;
+                shootTimeout = 2;
+                shootAnimation = 10;
+            }
+
+            function process(){
+                if(keys.left)
+                    player.turnLeft();
+                else if(keys.right)
+                    player.turnRight();
+                else if(keys.up)
+                    player.moveForward();
+                else if(keys.down)
+                    player.moveBackward();
+                else if(keys.space)
+                    openGateCommand();
+                else if(keys.ctrl && player.shoot == 0){
+                    shootFunction();
+                }
+                touch();
+                //win condition
+                if(player.positionY > 700){
+                    alert("You Won!!");
+                    clearInterval(drawRef);
+                    clearInterval(processRef);
+                }
+                //lose condition
+                if(player.health <= 0){
+                    alert("You lose!!");
+                    clearInterval(drawRef);
+                    clearInterval(processRef);
+                }
+                //shoot timeout
+                if(shootTimeout > 0){
+                    shootTimeout--;
+                }
+                else
+                    player.shoot = 0;
+                //console.log(player.health);
+            }
+            function initializeArrays(){
+                //assign assets
+                asset = new Array(numberOfAssets);
+                
+                for(var i = 0; i < numberOfAssets; i ++){
+                    asset[i] = document.getElementById("asset" + i);
+                }
+                //put these in a function for fucks sake /./ lol
+                itemDistArray = new Array(widthPixels);
+                wallDistArray = new Array(widthPixels);
+                mapIDArray = new Array(widthPixels);
+                itemMapIDArray = new Array(widthPixels);
+                screenArray = new Array(widthPixels);
+                itemScreenArray = new Array(widthPixels);
+                gateArray = new Array();
+                pickupArray = new Array();
+                enemyArray = new Array();
+                for(var i = 0; i < widthPixels; i++){
+                    screenArray[i] = new Screen(1);
+                    itemScreenArray[i] = new ItemScreen(1);
+                    itemDistArray[i] = new Array();
+                    itemMapIDArray[i] = new Array();
+                }
+            }
+
+            function enemyAction(){
+                for(var i = 0; i < enemyArray.length; i++){
+                    if(enemyArray[i].aiTimer > 0){
+                        var clear = 0;
+                        if(enemyArray[i].choice == 1){
+                            //check left for items and wall
+                            if(mapArray[enemyArray[i].y][enemyArray[i].x - 1] == 0)
+                                clear++;
+                            if(itemMapArray[enemyArray[i].y][enemyArray[i].x - 1] == 0)
+                                clear++;
+                            if(clear == 2){
+                                
+                                //clear the item
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = 0;
+                                //move left
+                                enemyArray[i].x = enemyArray[i].x - 1;
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = enemyArray[i].ID;
+                            }
+
+                        }
+                        else if(enemyArray[i].choice == 2){
+                            //check right for items and wall
+                            if(mapArray[enemyArray[i].y][enemyArray[i].x + 1] == 0)
+                                clear++;
+                            if(itemMapArray[enemyArray[i].y][enemyArray[i].x + 1] == 0)
+                                clear++;
+                            if(clear == 2){
+                                //clear the item
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = 0;
+                                //move right
+                                enemyArray[i].x = enemyArray[i].x + 1;
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = enemyArray[i].ID;
+                            }
+                            
+                        }
+                        else if(enemyArray[i].choice == 3){
+                            //check right for items and wall
+                            if(mapArray[enemyArray[i].y + 1][enemyArray[i].x] == 0)
+                                clear++;
+                            if(itemMapArray[enemyArray[i].y + 1][enemyArray[i].x] == 0)
+                                clear++;
+                            if(clear == 2){
+                                //clear the item
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = 0;
+                                //move right
+                                enemyArray[i].y = enemyArray[i].y + 1;
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = enemyArray[i].ID;
+                            }
+                        }
+                        else if(enemyArray[i].choice == 4){
+                            //check right for items and wall
+                            if(mapArray[enemyArray[i].y - 1][enemyArray[i].x] == 0)
+                                clear++;
+                            if(itemMapArray[enemyArray[i].y - 1][enemyArray[i].x] == 0)
+                                clear++;
+                            if(clear == 2){
+                                //clear the item
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = 0;
+                                //move right
+                                enemyArray[i].y = enemyArray[i].y - 1;
+                                itemMapArray[enemyArray[i].y][enemyArray[i].x] = enemyArray[i].ID;
+                            }
+                        }
+                        else if(enemyArray[i].choice > 4){
+                            enemyArray[i].shoot = 1;
+                        }
+                        enemyArray[i].aiTimer--;
+                    }
+                    else{
+                        enemyArray[i].shoot = 0;
+                        enemyArray[i].aiTimer = 10;
+                        enemyArray[i].choice = Math.floor( 0 + Math.random() * 6);
+                        if(enemyArray[i].dead == 1)
+                            enemyArray[i].choice = 0;
+                    }
+                }
+            }
+
+            function start(){
+                initializeArrays();
+                keyboardStuff();
+                initializeCanvas();
+                map();
+                drawMap();
+                for (var i = 0; i < 4; ++i) {
+                    var control = document.createElement('div');
+                    $(control).addClass('node');
+                    $('body').append(control);
+                    controls.push(control);
+                }
+                //hide the texture canvas
+                textureCanvas.style.display = "none";
+                player = new Player(playerStartX, playerStartY);
+                drawRef = window.setInterval(drawProcess, 50);
+                processRef = window.setInterval(process, 20);
+                gateRef = window.setInterval(openGate, 100);
+                pickupRef = window.setInterval(pickupCheck, 100);
+                aiRef = window.setInterval(enemyAction, 100);
+            }
+            class Item{
+                constructor(itemType, x, y, z, height, width){
+                    this.x = x;
+                    this.y = y;
+                    this.z = z; //position from the roof
+                    this.ID = itemMapID;
+                    this.pickUp = 0;
+                    this.shoot = 0;
+                    this.dead = 0;
+                    this.choice = 0;
+                    this.aiTimer = 0;
+                    this.height = height * scaleForScreen; //height in full view
+                    this.width = width * scaleForScreen; //width in full view
+                    this.itemType = itemType; //item type 1 == wall lamp 2 == hanging lamp 3 == prison 4 == 5 == lamp 25 , 26 pickups
+                    this.placeItem(x, y);
+                }
+                placeItem(x, y){
+                    itemMapArray[y][x] = itemMapID;
+                    itemMapID++;
+                }
+            }
+            class ItemScreen{
+                constructor(type){
+                    this.itemList = new Array();
+                    this.itemListX = new Array();
+                    this.itemListY = new Array();
+                    this.itemListHeight = new Array();
+                    this.itemListWidth = new Array();
+                }
+                addItem(type, x, y, height, width){
+                    this.itemList.push(type);
+                    this.itemListX.push(x);
+                    this.itemListY.push(y);
+                    this.itemListHeight.push(height);
+                    this.itemListWidth.push(width);
+                }
+                separateRepeatingItems(){ //separate repeating items of the same id, choose the midpoint if multiple items available
+                    //solved with drawScreen
+                }
+            }
+            class Screen{
+                constructor(type){
+                    this.x = 0;
+                    this.y1 = 0;
+                    this.y2 = 0;
+                    this.start = 0;
+                    this.finish = 0;
+                    this.wallId = 0;
+                    this.mapId = 0;
+                    this.texture = 0;
+                }
+                findMyId(){
+                    for(var k = 0; k < mapWall.length; k++){
+                        if(mapWall[k] > this.mapId){
+                            this.wallId = k;
+                            this.texture = wallArray[this.wallId].textureType;
+                            break;
+                        }
+                    }
+                }
+            }
+            class Player{
+                constructor(x, y){
+                    this.positionX = x;
+                    this.positionY = y;
+                    this.angle = 270;
+                    this.collisionCheckDist = 4; //should be equal to wall thickness
+                    this.moveRadius = 3; //should be less than wall thickness and collisionCheckDist
+                    this.collisionCheck = new Array(4);
+                    this.collisionCheck[0] = 0; //up
+                    this.collisionCheck[1] = 0; //right
+                    this.collisionCheck[2] = 0; //down
+                    this.collisionCheck[3] = 0; //left
+                    this.shoot = 0;
+                    this.hasGun = 0; //0 == no gun 1 == pistol
+                    this.health = 100; //has 5 health at the beginning, reduces with each hit
+                    this.updatePosition();
+                }
+                updatePosition(){
+                    //drawMap();
+                    //draw player on the map
+                    drawPlayer(this.positionX, this.positionY);
+                }
+                moveForward(){
+                    this.collisionCheckFunc();
+                    if(this.collisionCheck[1] == 0){
+                        if(this.angle >= 0 && this.angle < 180)
+                            this.positionX = this.positionX + this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[3] == 0){
+                        if(this.angle >= 180 && this.angle < 360)
+                            this.positionX = this.positionX + this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 0 && this.angle < 90)
+                            this.positionY = this.positionY - this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 270 && this.angle < 360)
+                            this.positionY = this.positionY - this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 90 && this.angle < 270)
+                            this.positionY = this.positionY - this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    this.updatePosition();
+                }
+                moveBackward(){
+                    this.collisionCheckFunc();
+                    if(this.collisionCheck[3] == 0){
+                        if(this.angle >= 0 && this.angle < 180)
+                            this.positionX = this.positionX - this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[1] == 0){
+                        if(this.angle >= 180 && this.angle < 360)
+                            this.positionX = this.positionX - this.moveRadius * Math.sin(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 0 && this.angle < 90)
+                            this.positionY = this.positionY + this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[2] == 0){
+                        if(this.angle >= 270 && this.angle < 360)
+                            this.positionY = this.positionY + this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    if(this.collisionCheck[0] == 0){
+                        if(this.angle >= 90 && this.angle < 270)
+                            this.positionY = this.positionY + this.moveRadius * Math.cos(Math.PI * this.angle / 180);
+                    }
+                    this.updatePosition();
+                }
+                turnLeft(){
+                    this.angle--;
+                    if(this.angle < 0)
+                        this.angle = this.angle + 360;
+                }
+                turnRight(){
+                    this.angle++;
+                    this.angle = this.angle % 360;
+                }
+                collisionCheckFunc(){
+                    //clear collison checks
+                    for(var i = 0; i < 4; i++)
+                        this.collisionCheck[i] = 0;
+                    var intX = Math.floor(this.positionX);
+                    var intY = Math.floor(this.positionY);
+                    for(var i = 0; i < this.collisionCheckDist; i++){
+                        if(intY + i < mapSize){
+                            if(mapArray[intY + i][intX] > 0)
+                                this.collisionCheck[2] = 1;
+                        }
+                        if(intX + i < mapSize){
+                            if(mapArray[intY][intX + i] > 0)
+                                this.collisionCheck[1] = 1;
+                        }
+                        if(intX - i >= 0){
+                            if(mapArray[intY][intX - i] > 0)
+                                this.collisionCheck[3] = 1;
+                        }
+                        if(intY - i >= 0){
+                            if(mapArray[intY - i][intX + i] > 0)
+                                this.collisionCheck[0] = 1;
+                        }
+                    }
+                }
+            }
+            class Wall{
+                constructor(wallType, x, y, textureType){
+                    this.rangeForGateX;
+                    this.rangeForGateY;
+                    this.wallType = wallType;
+                    this.ID = wallID;
+                    this.textureType = textureType;
+                    wallID++;
+                    this.x = x;
+                    this.y = y;
+                    switch(this.wallType){
+                        case 0:
+                            this.thinWallHor(x, y);
+                            break;
+                        case 1:
+                            this.thinWallVer(x, y);
+                            break;
+                        case 2:
+                            this.gateHor(x, y);
+                            break;
+                        case 3:
+                            this.gateVer(x, y);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                thinWallHor(x, y){
+                    for(var i = 0 ; i < textureLength; i++){
+                        if((x + i) < mapSize){
+                            mapArray[y][x + i] = mapID;
+                        }      
+                        mapID++;
+                    }
+                    mapWall.push(mapID);
+                }
+                thinWallVer(x, y){
+                    for(var i = 0 ; i < textureLength; i++){
+                        if((y + i) < mapSize){
+                            mapArray[y + i][x] = mapID;
+                        }
+                        mapID++;
+                    }
+                    mapWall.push(mapID);
+                }
+                gateHor(x, y){
+                    this.rangeForGateX = new Array(2);
+                    this.rangeForGateY = new Array(2);
+                    
+                    this.rangeForGateX[0] = x;
+                    this.rangeForGateX[1] = x + textureLength - 1;
+
+                    this.rangeForGateY[0] = y - (textureLength - 1);
+                    this.rangeForGateY[1] = y + (textureLength - 1);
+                    for(var i = 0 ; i < textureLength; i++){
+                        if((x + i) < mapSize){
+                            mapArray[y][x + i] = mapID;
+                        }      
+                        mapID++;
+                    }
+                    mapWall.push(mapID);
+                }
+                gateVer(x, y){
+                    this.rangeForGateX = new Array(2);
+                    this.rangeForGateY = new Array(2);
+                    
+                    this.rangeForGateX[0] = x;
+                    this.rangeForGateX[1] = x + textureLength - 1;
+
+                    this.rangeForGateY[0] = y - (textureLength - 1);
+                    this.rangeForGateY[1] = y + (textureLength - 1);
+                    
+                    for(var i = 0 ; i < textureLength; i++){
+                        if((y + i) < mapSize){
+                            mapArray[y + i][x] = mapID;
+                        }
+                        mapID++;
+                    }
+                    mapWall.push(mapID);
+                }
+            }
+            window.addEventListener("load",start,false);   
+        </script>
+    </head>
+    <body>
+        <canvas id = "gameScreen" width = "1440" height = "960" style = "border:1px solid #000000;"></canvas>
+        <canvas id = "textureScreen" width = "1440" height = "960" style = "border:1px solid #000000;"></canvas>
+        <canvas id = "testScreen"  style = "border:1px solid #000000;"></canvas>
+        
+        <div id = "controls" style = "width: 50%; height :30%">
+            <table align = "left" table border = "1" style = "background-color: white; ">
+                <tbody>
+                    <tr>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_left.png width = "150px" height = "150px" onclick = "leftf();">
+                        </th>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_up.png width = "250px" height = "125px" onclick = "upf();">
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_right.png width = "150px" height = "150px" onclick = "rightf();"> 
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_fire.png width = "150px" height = "150px" onclick = "shootTouch();"> 
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <img src = snakearrow_open.png width = "150px" height = "150px" onclick = "openDoorTouch();"> 
+                        </th>
+                        <th rowspan = "2" colspan = "1">
+                            <div id = "score"><h1>Game for testing, WIP</h1></div>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th rowspan = "1" colspan = "3">
+                            <img src = snakearrow_down.png width = "250px" height = "125px" onclick = "downf();">
+                        </th>
+                    </tr>
+                    
+                </tbody>
+            </table>
+        </div>
+        <div id = "assets">
+            <img id = "texture0" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture1" width = "10" height = "10" src="WolfWar3D_assets/concrete.png">
+            <img id = "texture2" width = "10" height = "10" src="WolfWar3D_assets/glass.png">
+            <img id = "texture3" width = "10" height = "10" src="WolfWar3D_assets/statue.png">
+            <img id = "texture4" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture5" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture6" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture7" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture8" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture9" width = "10" height = "10" src="WolfWar3D_assets/brick.png">
+            <img id = "texture20" width = "10" height = "10" src="WolfWar3D_assets/gate.png">
+
+
+            <img id = "asset0" width = "10" height = "10" src="WolfWar3D_assets/wallLamp.png">
+            <img id = "asset1" width = "10" height = "10" src="WolfWar3D_assets/wallLamp2.png">
+            <img id = "asset2" width = "10" height = "10" src="WolfWar3D_assets/poster1.png">
+            <img id = "asset3" width = "10" height = "10" src="WolfWar3D_assets/plant.png">
+            <img id = "asset4" width = "10" height = "10" src="WolfWar3D_assets/teleporter.png">
+            <img id = "asset5" width = "10" height = "10" src="WolfWar3D_assets/table.png">
+            <img id = "asset6" width = "10" height = "10" src="WolfWar3D_assets/fishTank1.png">
+            <img id = "asset7" width = "10" height = "10" src="WolfWar3D_assets/fishTank2.png">
+            <img id = "asset8" width = "10" height = "10" src="WolfWar3D_assets/fishTank3.png">
+            <img id = "asset9" width = "10" height = "10" src="WolfWar3D_assets/fishTank4.png">
+            <img id = "asset10" width = "10" height = "10" src="WolfWar3D_assets/fishTank5.png">
+            <img id = "asset11" width = "10" height = "10" src="WolfWar3D_assets/fishTank6.png">
+            <img id = "asset12" width = "10" height = "10" src="WolfWar3D_assets/fishTank7.png">
+            <img id = "asset13" width = "10" height = "10" src="WolfWar3D_assets/fan1.png">
+            <img id = "asset14" width = "10" height = "10" src="WolfWar3D_assets/fan2.png">
+
+            <img id = "asset15" width = "10" height = "10" src="WolfWar3D_assets/poster2.png">
+            <img id = "asset16" width = "10" height = "10" src="WolfWar3D_assets/Games1.jpg">
+            <img id = "asset17" width = "10" height = "10" src="WolfWar3D_assets/Games2.jpg">
+            <img id = "asset18" width = "10" height = "10" src="WolfWar3D_assets/Games3.jpg">
+            <img id = "asset19" width = "10" height = "10" src="WolfWar3D_assets/Games4.jpg">
+            <img id = "asset20" width = "10" height = "10" src="WolfWar3D_assets/Games5.jpg">
+            <img id = "asset21" width = "10" height = "10" src="WolfWar3D_assets/Games6.jpg">
+            <img id = "asset22" width = "10" height = "10" src="WolfWar3D_assets/Games7.jpg">
+            <img id = "asset23" width = "10" height = "10" src="WolfWar3D_assets/Games8.jpg">
+            <img id = "asset24" width = "10" height = "10" src="WolfWar3D_assets/Games9.jpg">
+
+            <img id = "asset25" width = "10" height = "10" src="WolfWar3D_assets/gun.png">
+            <img id = "asset26" width = "10" height = "10" src="WolfWar3D_assets/medKit.png">
+            <img id = "asset27" width = "10" height = "10" src="WolfWar3D_assets/ash.png">
+
+
+            <img id = "asset28" width = "10" height = "10" src="WolfWar3D_assets/enemy.png">
+            <img id = "asset29" width = "10" height = "10" src="WolfWar3D_assets/enemyShooting.png">
+            <img id = "asset30" width = "10" height = "10" src="WolfWar3D_assets/enemyDying.png">
+            <img id = "asset31" width = "10" height = "10" src="WolfWar3D_assets/enemyDyingShooting.png">
+            <img id = "asset32" width = "10" height = "10" src="WolfWar3D_assets/enemyDead.png">
+
+            <img id = "gun" width = "10" height = "10" src="WolfWar3D_assets/holdingGun.png">
+            <img id = "gunShoot" width = "10" height = "10" src="WolfWar3D_assets/shootingGun.png">
+
+            
+        </div>
+    </body>
+</html>

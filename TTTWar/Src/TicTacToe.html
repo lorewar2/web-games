@@ -1,0 +1,415 @@
+<html>
+    <head>
+        <style>
+            body{
+                overflow: hidden;
+            }
+            img {
+                max-width: 100%;
+            }
+        </style>
+        <script>
+            var screen = new Array(9);
+            var rotate = new Array(3);
+            var waiting = 1;
+            var player = 5;
+            var turn = 0;
+            var angle = 0;
+            var rotateRef;
+            var waitingRef;
+            var startVar = 0;
+            var dots = 0;
+            var player = 0;
+            var lastPost = 10;
+            var win = 0;
+            var lose = 0;
+            var message;
+
+            function sendComment(){
+                if(startVar == 0){
+
+                }
+                else{
+                    var comment = document.getElementById("comment").value;
+                    document.getElementById("comment").value = " ";
+                    if (window.XMLHttpRequest) {
+                        xmlhttp = new XMLHttpRequest();
+                    } else {
+                        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    xmlhttp.onreadystatechange = function() {
+                        if (this.readyState == 4 && this.status == 200) {
+                        }
+                    };
+                    comment = "Player " + (player + 1) + " says " + comment; 
+                    xmlhttp.open("GET","TicTacToe_assets/sendComment.php?q=" + comment , true);
+                    xmlhttp.send();
+                }
+		    }
+            function resetComment(){
+                if (window.XMLHttpRequest) {
+                        xmlhttp = new XMLHttpRequest();
+                    } else {
+                        xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                    }
+                    xmlhttp.onreadystatechange = function() {
+                        if (this.readyState == 4 && this.status == 200) {
+                            resetPositions();
+                        }
+                    };
+                    xmlhttp.open("GET","TicTacToe_assets/resetComment.php" , true);
+                    xmlhttp.send();
+            }
+            function sendUpdate(){
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                    }
+                };
+                xmlhttp.open("GET","TicTacToe_assets/sendComment.php?q=" + message , true);
+                xmlhttp.send();
+		    }
+
+            function receiveComment() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        document.getElementById("txtHint").innerHTML = this.responseText;
+                    }
+                };
+                xmlhttp.open("GET","TicTacToe_assets/receiveComment.php",true);
+                xmlhttp.send();
+		    }
+
+            function sendPositions(){
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        receivePositions();
+                    }
+                };
+                xmlhttp.open("GET","TicTacToe_assets/savePositionTTT.php?q=" + lastPost, true);
+                xmlhttp.send();
+                message = "Player " + (player + 1) + " marked " + lastPost + " and Waiting";
+                sendUpdate();
+		    }
+
+            function resetPositions(){
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        alert("reset");
+                        window.location.reload(false);
+                    }
+                };
+                xmlhttp.open("GET","TicTacToe_assets/savePositionTTT.php?q=" + 15, true);
+                xmlhttp.send();
+		    }
+
+            function receivePositions() {
+                if (window.XMLHttpRequest) {
+                    xmlhttp = new XMLHttpRequest();
+                } else {
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.onreadystatechange = function() {
+                    if (this.readyState == 4 && this.status == 200) {
+                        if(this.responseText == lastPost || this.responseText == 15){
+                            receivePositions();
+                        }
+                        else{
+                            clearInterval(waitingRef);
+                            document.getElementById("assets").innerHTML = "<h1>Touch the screen</h1>";
+                            var num = parseInt(this.responseText);
+                            if(turn % 2){
+                                document.getElementById(num).setAttribute("src","TicTacToe_assets/cross.png");
+                                screen[num] = 1;
+                            }
+                            else{
+                                document.getElementById(num).setAttribute("src","TicTacToe_assets/circle.png");
+                                screen[num] = 2;
+                            } 
+                            loseCheck();
+                            turn++;
+                            waiting = 0;
+                        }
+                    }
+                };
+                xmlhttp.open("GET","TicTacToe_assets/getPositionTTT.php",true);
+                xmlhttp.send();
+		    }
+
+            function draw(i){
+                if(waiting != 1){
+                    lastPost = i;
+                    waiting = 1;
+                    if(screen[i] == 0){
+                        if(turn % 2){
+                            document.getElementById(i).setAttribute("src","TicTacToe_assets/cross.png");
+                            screen[i] = 1;
+                        }
+                        else{
+                            document.getElementById(i).setAttribute("src","TicTacToe_assets/circle.png");
+                            screen[i] = 2;
+                        }  
+                        turn++;
+                    }
+                    if((screen[0] == screen[1]) && (screen[1] == screen[2]) && (screen[2] > 0)){
+                        win = 1;
+                        rotate[0] = 0;
+                        rotate[1] = 1;
+                        rotate[2] = 2;
+                    }
+                    if((screen[3] == screen[4]) && (screen[4] == screen[5]) && (screen[5] > 0)){
+                        win = 1;
+                        rotate[0] = 3;
+                        rotate[1] = 4;
+                        rotate[2] = 5;
+                    }  
+                    if((screen[6] == screen[7]) && (screen[7] == screen[8]) && (screen[8] > 0)){
+                        win = 1;
+                        rotate[0] = 6;
+                        rotate[1] = 7;
+                        rotate[2] = 8;
+                    }
+                    if((screen[0] == screen[3]) && (screen[3] == screen[6]) && (screen[6] > 0)){
+                        win = 1;
+                        rotate[0] = 0;
+                        rotate[1] = 3;
+                        rotate[2] = 6;
+                    }
+                    if((screen[1] == screen[4]) && (screen[4] == screen[7]) && (screen[7] > 0)){
+                        win = 1;
+                        rotate[0] = 1;
+                        rotate[1] = 4;
+                        rotate[2] = 7;
+                    }
+                    if((screen[2] == screen[5]) && (screen[5] == screen[8]) && (screen[8] > 0)){
+                        win = 1;
+                        rotate[0] = 2;
+                        rotate[1] = 5;
+                        rotate[2] = 8;
+                    }
+                    if((screen[0] == screen[4]) && (screen[4] == screen[8]) && (screen[8] > 0)){
+                        win = 1;
+                        rotate[0] = 0;
+                        rotate[1] = 4;
+                        rotate[2] = 8;
+                    }
+                    if((screen[6] == screen[4]) && (screen[4] == screen[2]) && (screen[2] > 0)){
+                        win = 1;
+                        rotate[0] = 6;
+                        rotate[1] = 4;
+                        rotate[2] = 2;
+                    }
+                    if(win == 1){
+                        alert("GameOver");
+                        message = "Game Over";
+                        sendUpdate();
+                        rotateRef = window.setInterval(rotating, 10);
+                    }
+                    if(turn == 9){
+                        alert("Tie");
+                    }
+                    waitingRef = window.setInterval(waitingFunc, 1000);
+                    sendPositions();
+                }
+            }
+            function loseCheck(){
+                if((screen[0] == screen[1]) && (screen[1] == screen[2]) && (screen[2] > 0)){
+                        win = 1;
+                        rotate[0] = 0;
+                        rotate[1] = 1;
+                        rotate[2] = 2;
+                    }
+                    if((screen[3] == screen[4]) && (screen[4] == screen[5]) && (screen[5] > 0)){
+                        win = 1;
+                        rotate[0] = 3;
+                        rotate[1] = 4;
+                        rotate[2] = 5;
+                    }  
+                    if((screen[6] == screen[7]) && (screen[7] == screen[8]) && (screen[8] > 0)){
+                        win = 1;
+                        rotate[0] = 6;
+                        rotate[1] = 7;
+                        rotate[2] = 8;
+                    }
+                    if((screen[0] == screen[3]) && (screen[3] == screen[6]) && (screen[6] > 0)){
+                        win = 1;
+                        rotate[0] = 0;
+                        rotate[1] = 3;
+                        rotate[2] = 6;
+                    }
+                    if((screen[1] == screen[4]) && (screen[4] == screen[7]) && (screen[7] > 0)){
+                        win = 1;
+                        rotate[0] = 1;
+                        rotate[1] = 4;
+                        rotate[2] = 7;
+                    }
+                    if((screen[2] == screen[5]) && (screen[5] == screen[8]) && (screen[8] > 0)){
+                        win = 1;
+                        rotate[0] = 2;
+                        rotate[1] = 5;
+                        rotate[2] = 8;
+                    }
+                    if((screen[0] == screen[4]) && (screen[4] == screen[8]) && (screen[8] > 0)){
+                        win = 1;
+                        rotate[0] = 0;
+                        rotate[1] = 4;
+                        rotate[2] = 8;
+                    }
+                    if((screen[6] == screen[4]) && (screen[4] == screen[2]) && (screen[2] > 0)){
+                        win = 1;
+                        rotate[0] = 6;
+                        rotate[1] = 4;
+                        rotate[2] = 2;
+                    }
+                    if(win == 1){
+                        alert("GameOver");
+                        rotateRef = window.setInterval(rotating, 10);
+                        //document.getElementById("screen").innerHTML = "";
+                    }
+                    if(turn == 9){
+                        alert("Tie");
+                    }
+            }
+            function waitingFunc(){
+                if(dots == 0){
+                    document.getElementById("assets").innerHTML = "<h1>Waiting</h1>";
+                    dots++;
+                }
+                else if(dots == 1){
+                    document.getElementById("assets").innerHTML = "<h1>Waiting.</h1>";
+                    dots++;
+                }
+                else if(dots == 2){
+                    document.getElementById("assets").innerHTML = "<h1>Waiting..</h1>";
+                    dots++;
+                }
+                else if(dots == 3){
+                    document.getElementById("assets").innerHTML = "<h1>Waiting...</h1>";
+                    dots = 0;
+                }  
+            }
+            function rotating(){
+                angle = angle + 10;
+                document.getElementById(rotate[0]).style.transform = "rotate(" + angle + "deg)";
+                document.getElementById(rotate[1]).style.transform = "rotate(" + angle + "deg)";
+                document.getElementById(rotate[2]).style.transform = "rotate(" + angle + "deg)";
+            }
+            function playerFunc(i){
+                if(startVar == 0){
+                    if(i == 0){
+                        clearInterval(waitingRef);
+                        document.getElementById("assets").innerHTML = "<h1>Touch the screen</h1>";
+                        waiting = 0;
+                        document.getElementById("player1").setAttribute("src","TicTacToe_assets/nothing.png");
+                        player = 0;
+                        message = "Player 1 joined the Game, waiting for Player 2";
+                        sendUpdate();
+
+                    }
+                    else{
+                        receivePositions();
+                        document.getElementById("player0").setAttribute("src","TicTacToe_assets/nothing.png");
+                        player = 1;
+                        waiting = 1;
+                        waitingRef = window.setInterval(waitingFunc, 1000);
+                        message = "Player 2 joined the Game, waiting for Player 1";
+                        sendUpdate();
+                    }
+                    commentRef = window.setInterval(receiveComment, 2000);
+                    startVar = 1;
+                }
+            }
+
+            function start(){
+                receiveComment();
+                for(var i = 0; i < 9; i++)
+                    screen[i] = 0;
+                document.getElementById("assets").innerHTML = "<h1>Choose 0 Player 1</h1> <h1>Choose X Player 2</h1> <h1>(Reset before starting)</h1>";
+            }
+            window.addEventListener("load",start,false);  
+
+        </script>
+    </head>
+    <body>
+        
+        <div id = "screen" style = "width: 100%; height :50%">
+                <table align = "left" table border = "1" style = "background-color: white; ">
+                    <tbody>
+                        <tr>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "0" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(0);">
+                            </th>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "1" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(1);">
+                            </th>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "2" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(2);">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "3" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(3);">
+                            </th>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "4" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(4);">
+                            </th>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "5" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(5);">
+                            </th>
+                        </tr>
+                        <tr>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "6" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(6);">
+                            </th>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "7" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(7);">
+                            </th>
+                            <th rowspan = "1" colspan = "1">
+                                <img id = "8" src = TicTacToe_assets/nothing.png width = "200px" height = "200px" onclick = "draw(8);">
+                            </th>
+                        </tr>
+                        
+                    </tbody>
+                </table>
+        </div>
+        <div id = "starting">
+            <img id = "player0" src = TicTacToe_assets/0.png width = "400px" height = "200px" onclick = "playerFunc(0);">
+            <img id = "player1" src = TicTacToe_assets/1.png width = "400px" height = "200px" onclick = "playerFunc(1);">
+            <img id = "restart" src = TicTacToe_assets/reset.png width = "400px" height = "200px" onclick = "resetComment();">
+        </div>
+        <div id = "assets">
+            
+        </div>
+
+        <div>
+            <input type = "text" id = "comment"  placeholder = "Chat" style="width: 530px; height: 50px;"> 
+            <input id = "submitButton" type = "submit" onclick = "sendComment();">
+            </form>
+        </div>
+
+        <div class = "txtHint" id = "txtHint" style = "border: 15px solid green; width: 500px; height: 150px; overflow: auto;">
+            <h3 id = "commentText">Loading.....</h3>
+        </div>
+
+        
+    </body>
+</html>
